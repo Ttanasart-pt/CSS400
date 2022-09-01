@@ -1,3 +1,5 @@
+numpy
 cv2
 mediapipe
 pyvirtualcam
+pillow
