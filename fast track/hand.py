@@ -14,6 +14,7 @@ class Hand():
     def __init__(self) -> None:
         self.gesture = 0
         self.pose = None
+        self.handSense = 0.2
         
     def poseAnalyze(self, handPose):
         self.pose = handPose.landmark
@@ -31,6 +32,6 @@ class Hand():
         index_pnt = Point.distance(index_mcp, index_tip) + Point.distance(index_mcp, index_dip)
         
         self.gesture = 0
-        isIndexPoint = index_pnt > 0.2
+        isIndexPoint = index_pnt > self.handSense
         if isIndexPoint:
             self.gesture = 1

@@ -1,8 +1,10 @@
+from cgitb import text
 import numpy as np
 import cv2
 import mediapipe as mp
 import pyvirtualcam       
 import tkinter as tk
+from tkinter import ttk
 
 from PIL import Image, ImageTk 
 import cv2
@@ -19,40 +21,73 @@ mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
-class camApp:
-    def __init__(self) -> None:
+class camApp(ttk.Frame):
+    def __init__(self, parent):
+        ttk.Frame.__init__(self)
+        
+        self.root = parent
+        self.root.protocol("WM_DELETE_WINDOW", self.onClose)
+        
+        self.columnconfigure(0, minsize = 400)
+        self.columnconfigure(1, minsize = 200)
+        self.camFrame = tk.Frame(self)
+        self.camFrame.grid(row=0, column=0)
+        self.settingFrame = tk.Frame(self)
+        self.settingFrame.grid(row=0, column=0)
+        
+        self.initSetting()
+        self.initCamera()
+        self.initCanvas()
+        
+        self.stopEvent = threading.Event()
+        self.thread = threading.Thread(target = self.videoLoop, args = ())
+        self.thread.start()
+        
+        self.detector = mp_holistic.Holistic(min_detection_confidence = 0.5, min_tracking_confidence = 0.5)
+        
+        self.leftHand = Hand()
+        self.rightHand = Hand()
+    
+    def initSetting(self):
+        self.settingFrame.grid(row = 0, column = 1, padx = 10, pady = 10, sticky="nsew")
+        for i in range(5):
+            self.settingFrame.rowconfigure(index = i, weight = 1)
+        
+        self.hsFrame = tk.Frame(self.settingFrame)
+        self.hsFrame.columnconfigure(index = 0, minsize=200)
+        self.hsFrame.columnconfigure(index = 1, weight = 1)
+        self.hsFrame.pack(fill = 'both', expand = True)
+        
+        hsLabel = tk.Label(self.hsFrame, text = "Hand sensitivity")
+        hsLabel.grid(row = 0, column = 0)
+        
+        self.handSenseValue = tk.DoubleVar(value = 0.2)
+        self.handSense = tk.Spinbox(self.hsFrame, from_ = 0, to = 1, increment = 0.01,\
+            textvariable = self.handSenseValue, command = self.onSensitivityChanged)
+        self.handSense.grid(row = 0, column = 1, padx = 0, pady=10, sticky = "ew")
+    
+    def initCamera(self):
         self.camWidth = 800
         self.camHeight = 480
         
         self.cam = cv2.VideoCapture(0)
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.camWidth)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camHeight)
-        self.frame = None
-        self.panel = None
-          
-        self.stopEvent = threading.Event()
-        self.thread = threading.Thread(target = self.videoLoop, args = ())
-        self.thread.start()
+        self.camView = None
         
-        self.root = tk.Tk()
-        self.root.title("Live Cam")
-        self.root.geometry("800x500")
-        self.root.protocol("WM_DELETE_WINDOW", self.onClose)
-        
-        self.detector = mp_holistic.Holistic(min_detection_confidence = 0.5, min_tracking_confidence = 0.5)
-        
-        self.leftHand = Hand()
-        self.rightHand = Hand()
-        
+    def initCanvas(self):
         self.laserPointerSurface = np.empty((self.camHeight, self.camWidth, 3), dtype = np.uint8)
         self.laserThickness = 5
         self.laserColor = (255., 0., 0.)
         self.drawLastPos = None
         
         self.canvasSurface = np.empty((self.camHeight, self.camWidth, 3), dtype = np.uint8)
-        
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
         
+    def onSensitivityChanged(self):
+        self.rightHand.handSense = self.handSenseValue.get()
+        self.leftHand.handSense = self.handSenseValue.get()
+    
     def start(self):
         self.root.mainloop()
         
@@ -117,13 +152,13 @@ class camApp:
                 image = Image.fromarray(img)
                 image = ImageTk.PhotoImage(image)
                 
-                if self.panel:
-                    self.panel.config(image = image)
-                    self.panel.image = image
+                if self.camView:
+                    self.camView.config(image = image)
+                    self.camView.image = image
                 else:
-                    self.panel = tk.Label(image = image)
-                    self.panel.image = image
-                    self.panel.pack(side = "left", padx = 10, pady = 10)
+                    self.camView = tk.Label(self.camFrame, image = image)
+                    self.camView.image = image
+                    self.camView.grid(row = 0, column = 0, padx = 10, pady = 10, sticky="nsew")
     
     def onClose(self):
         print("Closing...")
@@ -134,6 +169,11 @@ if __name__ == "__main__":
     print("Opening application...")
     time.sleep(1)
     
-    app = camApp()
+    root = tk.Tk()
+    root.title("Live Cam")
+    root.geometry("1000x500")
+    
+    app = camApp(root)
+    app.pack(fill="both", expand=True)
     app.start()
     
