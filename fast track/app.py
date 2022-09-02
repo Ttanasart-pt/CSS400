@@ -20,6 +20,16 @@ def pointSide(a, b, c):
 class Hand():
     def __init__(self) -> None:
         self.isOpen = False
+        
+    def poseAnalyze(self, handPose):
+        wrist = handPose.landmark[mp_hands.HandLandmark.WRIST]
+        index_mcp = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
+        pinky_mcp = handPose.landmark[mp_hands.HandLandmark.PINKY_MCP]
+        
+        index_tip = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+        
+        self.isOpen = pointSide(index_mcp, pinky_mcp, wrist) != pointSide(index_mcp, pinky_mcp, index_tip)
+        self.isOpen = True
 
 class camApp:
     def __init__(self) -> None:
@@ -60,16 +70,6 @@ class camApp:
     def onButton(self):
         pass
     
-    def handPoseAnalyzer(self, handPose, handObject: Hand):
-        wrist = handPose.landmark[mp_hands.HandLandmark.WRIST]
-        index_mcp = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
-        pinky_mcp = handPose.landmark[mp_hands.HandLandmark.PINKY_MCP]
-        
-        index_tip = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-        
-        handObject.isOpen = pointSide(index_mcp, pinky_mcp, wrist) != pointSide(index_mcp, pinky_mcp, index_tip)
-        handObject.isOpen = True
-    
     def frameAnalyze(self, img):
         results = self.detector.process(img)
         
@@ -93,10 +93,10 @@ class camApp:
             .get_default_hand_landmarks_style())
         
         if(results.right_hand_landmarks):
-            self.handPoseAnalyzer(results.right_hand_landmarks, self.rightHand)
+            self.rightHand.poseAnalyze(results.right_hand_landmarks)
         
         if(results.left_hand_landmarks):
-            self.handPoseAnalyzer(results.left_hand_landmarks, self.leftHand)
+            self.leftHand.poseAnalyze(results.left_hand_landmarks)
             
             if(self.leftHand.isOpen):
                 index_finger = results.left_hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
