@@ -8,6 +8,7 @@ from PIL import Image, ImageTk
 import cv2
 import threading
 import time
+from geometric import Point
 
 mp_hands = mp.solutions.hands
 mp_holistic = mp.solutions.holistic
@@ -19,17 +20,21 @@ def pointSide(a, b, c):
 
 class Hand():
     def __init__(self) -> None:
-        self.isOpen = False
+        self.gesture = 0
         
     def poseAnalyze(self, handPose):
         wrist = handPose.landmark[mp_hands.HandLandmark.WRIST]
         index_mcp = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
         pinky_mcp = handPose.landmark[mp_hands.HandLandmark.PINKY_MCP]
+        palm = Point((wrist.x + index_mcp.x + pinky_mcp.x) / 3, (wrist.y + index_mcp.y + pinky_mcp.y) / 3, (wrist.z + index_mcp.z + pinky_mcp.z) / 3)
         
         index_tip = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
         
-        self.isOpen = pointSide(index_mcp, pinky_mcp, wrist) != pointSide(index_mcp, pinky_mcp, index_tip)
-        self.isOpen = True
+        self.gesture = 0
+        
+        isIndexPoint = Point.distance(index_tip, palm) < Point.distance(palm, wrist)
+        if isIndexPoint:
+            self.gesture = 1
 
 class camApp:
     def __init__(self) -> None:
@@ -98,7 +103,7 @@ class camApp:
         if(results.left_hand_landmarks):
             self.leftHand.poseAnalyze(results.left_hand_landmarks)
             
-            if(self.leftHand.isOpen):
+            if(self.leftHand.gesture == 1):
                 index_finger = results.left_hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
                 fingerPos = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])))
                 cv2.circle(self.laserPointerSurface, fingerPos, self.laserThickness - 1, self.laserColor, -1)
