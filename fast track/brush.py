@@ -1,11 +1,14 @@
+from geometry import Point
 import cvpainter
 
 class Stroke():
     def __init__(self, surface) -> None:
         self.anchors = []
         self.surface = surface
-        self.thickness = 4
-        self.color = (255, 0, 0)
+        self.thickness = 5
+        self.color = (0, 255, 255)
+        
+        self.anchorMinDistance = 16
     
     def record(self, point):
         self.anchors.append(point)
@@ -13,11 +16,16 @@ class Stroke():
     def release(self):
         if(len(self.anchors) == 0):
             return
+        
+        op = None
+        for p in self.anchors:
+            if op is None:
+                op = p
+                continue
+            if(Point.distance(op, p) < self.anchorMinDistance):
+                continue
             
-        for i in range(self.anchors - 1):
-            p0 = self.anchors[i]
-            p1 = self.anchors[i + 1]
-            
-            cvpainter.draw_line(self.surface, p0, p1, self.thickness, self.color)
+            cvpainter.draw_line(self.surface, op, p, self.thickness, self.color)
+            op = p
             
         self.anchors.clear()

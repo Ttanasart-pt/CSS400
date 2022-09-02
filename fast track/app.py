@@ -10,6 +10,7 @@ import threading
 import time
 
 from geometry import Point
+from hand import Hand
 import cvpainter
 import brush
 
@@ -17,29 +18,6 @@ mp_hands = mp.solutions.hands
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
-
-def pointSide(a, b, c):
-    return ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) > 0;
-
-class Hand():
-    def __init__(self) -> None:
-        self.gesture = 0
-        self.pose = None
-        
-    def poseAnalyze(self, handPose):
-        self.pose = handPose
-        wrist = handPose.landmark[mp_hands.HandLandmark.WRIST]
-        index_mcp = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
-        pinky_mcp = handPose.landmark[mp_hands.HandLandmark.PINKY_MCP]
-        palm = Point((wrist.x + index_mcp.x + pinky_mcp.x) / 3, (wrist.y + index_mcp.y + pinky_mcp.y) / 3, (wrist.z + index_mcp.z + pinky_mcp.z) / 3)
-        
-        index_tip = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-        
-        self.gesture = 0
-        
-        isIndexPoint = pointSide(index_mcp, pinky_mcp, index_tip) != pointSide(index_mcp, pinky_mcp, wrist)
-        if isIndexPoint:
-            self.gesture = 1
 
 class camApp:
     def __init__(self) -> None:
@@ -74,16 +52,10 @@ class camApp:
         self.canvasSurface = np.empty((self.camHeight, self.camWidth, 3), dtype = np.uint8)
         
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
-
-        tk.Button(self.root, text = "Button", command = self.onButton)\
-          .pack(side = "bottom", fill = "both", expand = "yes", padx = 10, pady = 10)
         
     def start(self):
         self.root.mainloop()
         
-    def onButton(self):
-        pass
-    
     def frameAnalyze(self, img):
         results = self.detector.process(img)
         
@@ -114,9 +86,9 @@ class camApp:
             
             if(self.leftHand.gesture == 1):
                 index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                fingerPos = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])))
+                fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
                 if self.drawLastPos:
-                    cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserColor, self.laserThickness)
+                    cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
                 self.drawLastPos = fingerPos
                 self.strokeDrawer.record(fingerPos)
             else:
