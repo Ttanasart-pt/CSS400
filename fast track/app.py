@@ -8,7 +8,10 @@ from PIL import Image, ImageTk
 import cv2
 import threading
 import time
-from geometric import Point
+
+from geometry import Point
+import cvpainter
+import brush
 
 mp_hands = mp.solutions.hands
 mp_holistic = mp.solutions.holistic
@@ -21,8 +24,10 @@ def pointSide(a, b, c):
 class Hand():
     def __init__(self) -> None:
         self.gesture = 0
+        self.pose = None
         
     def poseAnalyze(self, handPose):
+        self.pose = handPose
         wrist = handPose.landmark[mp_hands.HandLandmark.WRIST]
         index_mcp = handPose.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
         pinky_mcp = handPose.landmark[mp_hands.HandLandmark.PINKY_MCP]
@@ -32,7 +37,7 @@ class Hand():
         
         self.gesture = 0
         
-        isIndexPoint = Point.distance(index_tip, palm) < Point.distance(palm, wrist)
+        isIndexPoint = pointSide(index_mcp, pinky_mcp, index_tip) != pointSide(index_mcp, pinky_mcp, wrist)
         if isIndexPoint:
             self.gesture = 1
 
@@ -65,6 +70,10 @@ class camApp:
         self.laserThickness = 5
         self.laserColor = (255., 0., 0.)
         self.drawLastPos = None
+        
+        self.canvasSurface = np.empty((self.camHeight, self.camWidth, 3), dtype = np.uint8)
+        
+        self.strokeDrawer = brush.Stroke(self.canvasSurface)
 
         tk.Button(self.root, text = "Button", command = self.onButton)\
           .pack(side = "bottom", fill = "both", expand = "yes", padx = 10, pady = 10)
@@ -104,18 +113,20 @@ class camApp:
             self.leftHand.poseAnalyze(results.left_hand_landmarks)
             
             if(self.leftHand.gesture == 1):
-                index_finger = results.left_hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
                 fingerPos = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])))
-                cv2.circle(self.laserPointerSurface, fingerPos, self.laserThickness - 1, self.laserColor, -1)
                 if self.drawLastPos:
-                    cv2.line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserColor, self.laserThickness)
+                    cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserColor, self.laserThickness)
                 self.drawLastPos = fingerPos
+                self.strokeDrawer.record(fingerPos)
             else:
                 self.drawLastPos = None
+                self.strokeDrawer.release()
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
         
         imgB = cv2.addWeighted(img, 1, self.laserPointerSurface, 1, 0.0)
+        imgB = cv2.addWeighted(imgB, 1, self.canvasSurface, 1, 0.0)
         return imgB
     
     def videoLoop(self):
