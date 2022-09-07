@@ -17,7 +17,6 @@ import cvpainter
 import brush
 
 mp_hands = mp.solutions.hands
-mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
@@ -43,7 +42,7 @@ class camApp(ttk.Frame):
         self.thread = threading.Thread(target = self.videoLoop, args = ())
         self.thread.start()
         
-        self.detector = mp_holistic.Holistic(min_detection_confidence = 0.5, min_tracking_confidence = 0.5)
+        self.detector = mp_hands.Hands(min_detection_confidence = 0.5, min_tracking_confidence = 0.5)
         
         self.leftHand = Hand()
         self.rightHand = Hand()
@@ -93,42 +92,28 @@ class camApp(ttk.Frame):
         
     def frameAnalyze(self, img):
         results = self.detector.process(img)
-        
-        mp_drawing.draw_landmarks(
-            img,
-            results.pose_landmarks,
-            mp_holistic.POSE_CONNECTIONS,
-            landmark_drawing_spec = mp_drawing_styles
-            .get_default_pose_landmarks_style())
-        mp_drawing.draw_landmarks(
-            img,
-            results.left_hand_landmarks,
-            mp_holistic.HAND_CONNECTIONS,
-            landmark_drawing_spec = mp_drawing_styles
-            .get_default_hand_landmarks_style())
-        mp_drawing.draw_landmarks(
-            img,
-            results.right_hand_landmarks,
-            mp_holistic.HAND_CONNECTIONS,
-            landmark_drawing_spec = mp_drawing_styles
-            .get_default_hand_landmarks_style())
-        
-        if(results.right_hand_landmarks):
-            self.rightHand.poseAnalyze(results.right_hand_landmarks)
-        
-        if(results.left_hand_landmarks):
-            self.leftHand.poseAnalyze(results.left_hand_landmarks)
-            
-            if(self.leftHand.gesture == 1):
-                index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
-                if self.drawLastPos:
-                    cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
-                self.drawLastPos = fingerPos
-                self.strokeDrawer.record(fingerPos)
-            else:
-                self.drawLastPos = None
-                self.strokeDrawer.release()
+
+        if(results.multi_hand_landmarks):
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(
+                    img,
+                    hand_landmarks,
+                    mp_hands.HAND_CONNECTIONS,
+                    landmark_drawing_spec = mp_drawing_styles.get_default_hand_landmarks_style()
+                )
+                
+                self.leftHand.poseAnalyze(hand_landmarks)
+                
+                if(self.leftHand.gesture == 1):
+                    index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                    fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
+                    if self.drawLastPos:
+                        cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
+                    self.drawLastPos = fingerPos
+                    self.strokeDrawer.record(fingerPos)
+                else:
+                    self.drawLastPos = None
+                    self.strokeDrawer.release()
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
         
@@ -161,7 +146,7 @@ class camApp(ttk.Frame):
                     self.camView.grid(row = 0, column = 0, padx = 10, pady = 10, sticky="nsew")
     
     def onClose(self):
-        print("Closing...")
+        print("Closing...")  
         self.stopEvent.set()
         self.root.quit()
 
@@ -176,4 +161,5 @@ if __name__ == "__main__":
     app = camApp(root)
     app.pack(fill="both", expand=True)
     app.start()
+    
     

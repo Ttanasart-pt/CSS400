@@ -9,12 +9,22 @@ class Stroke():
         self.color = (0, 255, 255)
         
         self.anchorMinDistance = 16
+        self.lineMinDistance = 32
     
     def record(self, point):
         self.anchors.append(point)
     
     def release(self):
         if(len(self.anchors) == 0):
+            return
+        
+        op = None
+        dist = 0
+        for p in self.anchors:
+            if op:
+                dist += Point.distance(op, p)
+            op = p
+        if(dist < self.lineMinDistance):
             return
         
         op = None
