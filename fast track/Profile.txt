@@ -1,0 +1,29 @@
+         423 function calls in 6.551 seconds
+
+   Ordered by: internal time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    6.550    6.550    6.551    6.551 {method 'mainloop' of '_tkinter.tkapp' objects}
+      134    0.000    0.000    0.000    0.000 C:\Users\tanas\AppData\Roaming\Python\Python39\site-packages\PIL\ImageTk.py:152(__str__)
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.print}
+      269    0.000    0.000    0.000    0.000 C:\Python39\lib\tkinter\__init__.py:4012(__str__)
+        1    0.000    0.000    0.000    0.000 app.py:176(onClose)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\threading.py:351(notify)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\threading.py:535(set)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\tkinter\__init__.py:1887(__call__)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\threading.py:256(__enter__)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\threading.py:374(notify_all)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\cProfile.py:117(__exit__)
+        1    0.000    0.000    6.551    6.551 C:\Python39\lib\tkinter\__init__.py:1427(mainloop)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\tkinter\__init__.py:1431(quit)
+        1    0.000    0.000    6.551    6.551 app.py:96(start)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\threading.py:271(_is_owned)
+        1    0.000    0.000    0.000    0.000 C:\Python39\lib\threading.py:259(__exit__)
+        1    0.000    0.000    0.000    0.000 {method '__enter__' of '_thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        1    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 {method 'quit' of '_tkinter.tkapp' objects}
+
+

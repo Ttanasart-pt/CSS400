@@ -1,4 +1,3 @@
-from cgitb import text
 import numpy as np
 import cv2
 import mediapipe as mp
@@ -24,6 +23,7 @@ class camApp(ttk.Frame):
     def __init__(self, parent):
         ttk.Frame.__init__(self)
         
+        self.debug = True
         self.root = parent
         self.root.protocol("WM_DELETE_WINDOW", self.onClose)
         
@@ -46,6 +46,9 @@ class camApp(ttk.Frame):
         
         self.leftHand = Hand()
         self.rightHand = Hand()
+        
+        self.lastFrameTime = time.time_ns()
+        self.frameTime = 0
     
     def initSetting(self):
         self.settingFrame.grid(row = 0, column = 1, padx = 10, pady = 10, sticky="nsew")
@@ -75,12 +78,12 @@ class camApp(ttk.Frame):
         self.camView = None
         
     def initCanvas(self):
-        self.laserPointerSurface = np.empty((self.camHeight, self.camWidth, 3), dtype = np.uint8)
+        self.laserPointerSurface = None
         self.laserThickness = 5
         self.laserColor = (255., 0., 0.)
         self.drawLastPos = None
         
-        self.canvasSurface = np.empty((self.camHeight, self.camWidth, 3), dtype = np.uint8)
+        self.canvasSurface = None
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
         
     def onSensitivityChanged(self):
@@ -89,10 +92,19 @@ class camApp(ttk.Frame):
     
     def start(self):
         self.root.mainloop()
+    
+    def surfaceCheck(self, result):
+        if self.laserPointerSurface is None:
+            self.laserPointerSurface = np.zeros_like(result)
+        if self.canvasSurface is None:
+            self.canvasSurface = np.zeros_like(result)
         
+        self.strokeDrawer.setSurface(self.canvasSurface)
+    
     def frameAnalyze(self, img):
         results = self.detector.process(img)
-
+        self.surfaceCheck(img)
+        
         if(results.multi_hand_landmarks):
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
@@ -121,15 +133,24 @@ class camApp(ttk.Frame):
         imgB = cv2.addWeighted(imgB, 1, self.canvasSurface, 1, 0.0)
         return imgB
     
+    def debugInfo(self, img):
+        fps = 1_000_000_000 / self.frameTime if self.frameTime != 0 else 0
+        y = 32
+        cv2.putText(img, f"fps: {fps:.2f}", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        y += 32 + 8
+    
     def videoLoop(self):
         with pyvirtualcam.Camera(width = 1280, height = 720, fps = 30) as camOut:
             while True:
                 if self.stopEvent.is_set():
                     break
                 
-                _, img = self.cam.read()
+                stat, img = self.cam.read()
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 img = self.frameAnalyze(img)
+                
+                if self.debug:
+                    self.debugInfo(img)
                 
                 #camOut.send(img)
                 #camOut.sleep_until_next_frame()
@@ -144,22 +165,26 @@ class camApp(ttk.Frame):
                     self.camView = tk.Label(self.camFrame, image = image)
                     self.camView.image = image
                     self.camView.grid(row = 0, column = 0, padx = 10, pady = 10, sticky="nsew")
+                    
+                now = time.time_ns()
+                self.frameTime = now - self.lastFrameTime
+                self.lastFrameTime = now
     
     def onClose(self):
         print("Closing...")  
         self.stopEvent.set()
         self.root.quit()
-
+        
 if __name__ == "__main__":
     print("Opening application...")
     time.sleep(1)
     
     root = tk.Tk()
     root.title("Live Cam")
-    root.geometry("1000x500")
+    root.geometry("1200x500")
     
     app = camApp(root)
     app.pack(fill="both", expand=True)
     app.start()
-    
-    
+        
+   
