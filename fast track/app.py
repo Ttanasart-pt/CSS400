@@ -1,3 +1,4 @@
+from tracemalloc import start
 import numpy as np
 import cv2
 import mediapipe as mp
@@ -49,6 +50,7 @@ class camApp(ttk.Frame):
         
         self.lastFrameTime = time.time_ns()
         self.frameTime = 0
+        self.analyzeTime = 0
     
     def initSetting(self):
         self.settingFrame.grid(row = 0, column = 1, padx = 10, pady = 10, sticky="nsew")
@@ -137,17 +139,26 @@ class camApp(ttk.Frame):
         fps = 1_000_000_000 / self.frameTime if self.frameTime != 0 else 0
         y = 32
         cv2.putText(img, f"fps: {fps:.2f}", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-        y += 32 + 8
+        y += 32
+        cv2.putText(img, f"frame time: {self.frameTime / 1_000_000:.2f} ms", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        y += 32
+        cv2.putText(img, f"analyze time: {self.analyzeTime / 1_000_000:.2f} ms", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        y += 32
     
     def videoLoop(self):
         with pyvirtualcam.Camera(width = 1280, height = 720, fps = 30) as camOut:
             while True:
+                startTime = time.time_ns()
+                
                 if self.stopEvent.is_set():
                     break
                 
                 stat, img = self.cam.read()
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                
                 img = self.frameAnalyze(img)
+                now = time.time_ns()
+                self.analyzeTime = now - startTime
                 
                 if self.debug:
                     self.debugInfo(img)
@@ -165,10 +176,9 @@ class camApp(ttk.Frame):
                     self.camView = tk.Label(self.camFrame, image = image)
                     self.camView.image = image
                     self.camView.grid(row = 0, column = 0, padx = 10, pady = 10, sticky="nsew")
-                    
+                
                 now = time.time_ns()
-                self.frameTime = now - self.lastFrameTime
-                self.lastFrameTime = now
+                self.frameTime = now - startTime
     
     def onClose(self):
         print("Closing...")  
