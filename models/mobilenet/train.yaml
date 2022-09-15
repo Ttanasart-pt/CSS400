@@ -1,0 +1,9 @@
+learning_rate: 4.e-2
+batch_size: 32
+input_size: 224
+epoch: 100
+
+dataset: "E:/HandPose/CMU/hand_syn/synth1"
+checkpoint: "mobilenet/checkpoints/test.chk"
+save_model: True
+load_model: True

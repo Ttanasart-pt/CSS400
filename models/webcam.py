@@ -1,16 +1,29 @@
+#from homebrew.CNN import Model
+from mobilenet.model import Model
+
 import cv2
-from homebrew.CNN import Model
 import torch
 from util.tester import runModel
 from util.checkpoint import load_checkpoint
 
-def main():
-    checkpoint_path = "homebrew/checkpoints/test.chk"
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    imageSize = 128
+import yaml
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', help='Path to config file.')
+
+args = parser.parse_args()
+with open(args.config, 'r') as f:
+    CONFIG = yaml.safe_load(f.read())
     
+def main():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = Model().to(device)
-    load_checkpoint(checkpoint_path, model)
+    
+    if CONFIG['checkpoint']:
+        checkpoint_path = CONFIG['checkpoint']
+        load_checkpoint(checkpoint_path, model)
+    imageSize = CONFIG['input_size']
     
     cap = cv2.VideoCapture(0)
 

@@ -1,4 +1,5 @@
-from homebrew.CNN import Model
+#from homebrew.CNN import Model
+from mobilenet.model import Model
 
 import torch
 import torch.nn as nn
@@ -47,6 +48,7 @@ def main():
     
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr = learning_rate)
+    min_loss = None
     
     for e in range(num_epoch):
         print(f'Epoch {e}')
@@ -64,12 +66,13 @@ def main():
             loss.backward()
             optimizer.step()
         
-        print(f"Average loss = {(acc_loss / len(dataloader)):.2f}")
-        
-    if(save_model):
-        save_checkpoint(checkpoint_path, model)
+        avg_loss = (acc_loss / len(dataloader))
+        print(f"Average loss = {avg_loss:.2f}")
+        if save_model and (min_loss is None or avg_loss < min_loss):
+            min_loss = avg_loss
+            save_checkpoint(checkpoint_path, model)
     
 if __name__ == "__main__":
     main()
     
-# example uses: python .\train.py --config "homebrew/config/train.yaml"
+# example uses: python .\train.py --config "homebrew/train.yaml"

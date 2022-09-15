@@ -1,79 +1,54 @@
-'''MobileNet in PyTorch.
+# Mobilenet model by jmjeon94 
+# https://github.com/jmjeon94/MobileNet-Pytorch
 
-See the paper "MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-for more details.
-'''
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
-
-def conv_bn(inp, oup, stride):
-    return nn.Sequential(
-        nn.Conv3d(inp, oup, kernel_size=3, stride=stride, padding=(1,1,1), bias=False),
-        nn.BatchNorm3d(oup),
-        nn.ReLU(inplace=True)
-    )
-
-
-class Block(nn.Module):
-    '''Depthwise conv + Pointwise conv'''
-    def __init__(self, in_planes, out_planes, stride=1):
-        super(Block, self).__init__()
-        self.conv1 = nn.Conv3d(in_planes, in_planes, kernel_size=3, stride=stride, padding=1, groups=in_planes, bias=False)
-        self.bn1 = nn.BatchNorm3d(in_planes)
-        self.conv2 = nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn2 = nn.BatchNorm3d(out_planes)
-
-    def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = F.relu(self.bn2(self.conv2(out)))
-        return out
-
+from torchsummary import summary
 
 class Model(nn.Module):
-    def __init__(self, num_classes=42, sample_size=224, width_mult=1.):
+    def __init__(self, num_classes = 42):
         super(Model, self).__init__()
 
-        input_channel = 32
-        last_channel = 1024
-        input_channel = int(input_channel * width_mult)
-        last_channel = int(last_channel * width_mult)
-        cfg = [
-        # c, n, s
-        [64,   1, (2,2,2)],
-        [128,  2, (2,2,2)],
-        [256,  2, (2,2,2)],
-        [512,  6, (2,2,2)],
-        [1024, 2, (1,1,1)],
-        ]
+        def conv_bn(inp, oup, stride):
+            return nn.Sequential(
+                nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+                nn.BatchNorm2d(oup),
+                nn.ReLU(inplace=True)
+                )
 
-        self.features = [conv_bn(3, input_channel, (1,2,2))]
-        # building inverted residual blocks
-        for c, n, s in cfg:
-            output_channel = int(c * width_mult)
-            for i in range(n):
-                stride = s if i == 0 else 1
-                self.features.append(Block(input_channel, output_channel, stride))
-                input_channel = output_channel
-        # make it nn.Sequential
-        self.features = nn.Sequential(*self.features)
+        def conv_dw(inp, oup, stride):
+            return nn.Sequential(
+                # dw
+                nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
+                nn.BatchNorm2d(inp),
+                nn.ReLU(inplace=True),
 
-        # building classifier
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(last_channel, num_classes),
+                # pw
+                nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+                nn.ReLU(inplace=True),
+                )
+
+        self.model = nn.Sequential(
+            conv_bn(   3,   32, 2),
+            conv_dw(  32,   64, 1),
+            conv_dw(  64,  128, 2),
+            conv_dw( 128,  128, 1),
+            conv_dw( 128,  256, 2),
+            conv_dw( 256,  256, 1),
+            conv_dw( 256,  512, 2),
+            conv_dw( 512,  512, 1),
+            conv_dw( 512,  512, 1),
+            conv_dw( 512,  512, 1),
+            conv_dw( 512,  512, 1),
+            conv_dw( 512,  512, 1),
+            conv_dw( 512, 1024, 2),
+            conv_dw(1024, 1024, 1),
+            nn.AdaptiveAvgPool2d(1)
         )
-
+        self.fc = nn.Linear(1024, num_classes)
 
     def forward(self, x):
-        x = self.features(x)
-        x = F.avg_pool3d(x, x.data.size()[-3:])
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
+        x = self.model(x)
+        x = x.view(-1, 1024)
+        x = self.fc(x)
         return x
-
-if __name__ == '__main__':
-    model = Model(num_classes=42, sample_size = 112, width_mult=1.)
-    model = model.cuda()
-    model = nn.DataParallel(model, device_ids=None)

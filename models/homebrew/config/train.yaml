@@ -1,9 +1,0 @@
-learning_rate: 4e-2
-batch_size: 2
-input_size: 128
-epoch: 10
-
-dataset: "E:/HandPose/CMU/hand_syn/synth1"
-checkpoint: "homebrew/checkpoints/test.chk"
-save_model: True
-load_model: True
