@@ -32,7 +32,7 @@ class Block(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, num_classes=600, sample_size=224, width_mult=1.):
+    def __init__(self, num_classes=42, sample_size=224, width_mult=1.):
         super(Model, self).__init__()
 
         input_channel = 32
@@ -74,7 +74,6 @@ class Model(nn.Module):
         return x
 
 if __name__ == '__main__':
-    model = Model(num_classes=600, sample_size = 112, width_mult=1.)
+    model = Model(num_classes=42, sample_size = 112, width_mult=1.)
     model = model.cuda()
     model = nn.DataParallel(model, device_ids=None)
-    print(model)
