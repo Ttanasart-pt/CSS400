@@ -33,12 +33,10 @@ class CMUDataset(Dataset):
         
         hand_label = [lm[:2] for lm in label_json['hand_pts']]
         labels = []
-        sf = self.size / h
+        sw, sh = self.size / w, self.size / h
         for hand in hand_label:
-            x = hand[0] * sf
-            y = hand[1] * sf
-            
-            x -= (w * sf - self.size) / 2
+            x = hand[0] * sw
+            y = hand[1] * sh
             
             labels.append(clamp(x, 0, self.size))
             labels.append(clamp(y, 0, self.size))

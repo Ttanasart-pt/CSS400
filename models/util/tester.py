@@ -6,10 +6,10 @@ from util.landmarkDrawer import drawPointArray
 from util.transforms import preprocess
 
 def testModel(model, path, size, device, outputPath):
-    proprocessor = preprocess(size)
+    preprocessor = preprocess(size)
     
     img = Image.open(path)
-    img = proprocessor(img)
+    img = preprocessor(img)
     
     res = model(torch.unsqueeze(img.to(device), 0)).cpu().detach().numpy()
     
@@ -21,3 +21,18 @@ def testModel(model, path, size, device, outputPath):
     
     with open(outputPath + ".txt", "w") as f:
         f.write(str(points))
+        
+def runModel(model, img, size, device):
+    preprocessor = preprocess(size)
+    
+    img = Image.fromarray(img)
+    img = preprocessor(img)
+    
+    res = model(torch.unsqueeze(img.to(device), 0)).cpu().detach().numpy()
+    
+    landmark = res[0].tolist()
+    points = []
+    for i in range(int(len(landmark) / 2)):
+        c = (landmark[i * 2], landmark[i * 2 + 1])
+        points.append(c)
+    return points
