@@ -9,19 +9,29 @@ from torchsummary import summary
 from tqdm import tqdm
 from dataloader.CMUpanoptic import CMUDataset
 from util.checkpoint import save_checkpoint, load_checkpoint
+
+import yaml
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', help='Path to config file.')
+
+args = parser.parse_args()
+with open(args.config, 'r') as f:
+    CONFIG = yaml.safe_load(f.read())
     
 def main():
-    num_epoch = 10
-    learning_rate = 4e-2
-    batch_size = 1
+    num_epoch = CONFIG['epoch']
+    learning_rate = CONFIG['learning_rate']
+    batch_size = CONFIG['batch_size']
 
-    checkpoint_path = "homebrew/checkpoints/test.chk"
-    save_model = True
-    load_model = True
+    checkpoint_path = CONFIG['checkpoint']
+    save_model = CONFIG['save_model']
+    load_model = CONFIG['load_model']
 
-    imageSize = 128
+    imageSize = CONFIG['input_size']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dataset = CMUDataset("E:\\HandPose\\CMU\\hand_syn\\synth1", imageSize)
+    dataset = CMUDataset(CONFIG['dataset'], imageSize)
 
     model = Model().to(device)
         
@@ -61,3 +71,5 @@ def main():
     
 if __name__ == "__main__":
     main()
+    
+# example uses: python .\train.py --config "homebrew/config/train.yaml"
