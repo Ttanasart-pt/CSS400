@@ -40,7 +40,6 @@ class CMUDataset(Dataset):
             
             labels.append(clamp(x, 0, self.size))
             labels.append(clamp(y, 0, self.size))
-            
         
         hand_label = torch.tensor(labels)
         

@@ -1,5 +1,6 @@
 #from homebrew.CNN import Model
-from mobilenet.model import Model
+#from mobilenet.model import Model
+from hourglass.model import Model
 
 import torch
 from util.tester import testModel

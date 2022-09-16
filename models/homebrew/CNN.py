@@ -33,6 +33,6 @@ class Model(nn.Module):
             nn.BatchNorm2d(out_channel),
             nn.LeakyReLU(0.2)
         )
-
+    
     def forward(self, x):
         return self.layers(x)
