@@ -7,3 +7,5 @@ dataset: "E:/HandPose/CMU/hand_syn/synth1"
 checkpoint: "mobilenet/checkpoints/test.chk"
 save_model: True
 load_model: True
+
+output_type: "keypoints"

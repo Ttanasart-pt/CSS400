@@ -1,6 +1,7 @@
 #from homebrew.CNN import Model
 #from mobilenet.model import Model
-from hourglass.model import Model
+#from hourglass.model import Model
+from Zimmerman.handSegNet import Model
 
 import torch
 import torch.nn as nn
@@ -9,7 +10,7 @@ from torch.utils.data import DataLoader
 from torchsummary import summary
 
 from tqdm import tqdm
-from dataloader.CMUpanoptic import CMUDataset
+from dataloader.CMUpanoptic import CMUDataset, CMUHeatmapDataset, CMUBBoxDataset, CMUHandSegment
 from util.checkpoint import save_checkpoint, load_checkpoint
 
 import yaml
@@ -33,8 +34,15 @@ def main():
 
     imageSize = CONFIG['input_size']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dataset = CMUDataset(CONFIG['dataset'], imageSize)
-
+    if(CONFIG['output_type'] == "keypoints"):
+        dataset = CMUDataset(CONFIG['dataset'], imageSize)
+    elif(CONFIG['output_type'] == "heatmap"):
+        dataset = CMUHeatmapDataset(CONFIG['dataset'], imageSize)
+    elif(CONFIG['output_type'] == "bbox"):
+        dataset = CMUBBoxDataset(CONFIG['dataset'], imageSize)
+    elif(CONFIG['output_type'] == "segment"):
+        dataset = CMUHandSegment(CONFIG['dataset'], imageSize)
+        
     model = Model().to(device)
         
     if(load_model):
@@ -55,11 +63,10 @@ def main():
         print(f'Epoch {e}')
         acc_loss = 0
         for imgs, labels in tqdm(dataloader):
-            imgs = imgs.to(device)
-            labels = labels.to(device)
+            imgs = imgs.type(torch.FloatTensor).to(device)
+            labels = labels.type(torch.FloatTensor).to(device)
             
             predicted = model(imgs)
-            
             loss = criterion(predicted, labels)
             acc_loss += loss
             
@@ -68,7 +75,7 @@ def main():
             optimizer.step()
         
         avg_loss = (acc_loss / len(dataloader))
-        print(f"Average loss = {avg_loss:.2f}")
+        print(f"Average loss = {avg_loss:.5f}")
         if save_model and (min_loss is None or avg_loss < min_loss):
             min_loss = avg_loss
             save_checkpoint(checkpoint_path, model)

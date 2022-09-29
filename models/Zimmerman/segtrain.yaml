@@ -1,0 +1,11 @@
+learning_rate: 4.e-2
+batch_size: 32
+input_size: 224
+epoch: 100
+
+dataset: "E:/HandPose/CMU/hand_manual/manual_train"
+checkpoint: "Zimmerman/checkpoints/test.chk"
+save_model: True
+load_model: False
+
+output_type: "segment"

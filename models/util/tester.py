@@ -22,7 +22,7 @@ def testModel(model, path, size, device, outputPath):
     with open(outputPath + ".txt", "w") as f:
         f.write(str(points))
         
-def runModel(model, img, size, device):
+def runModelKeypoint(model, img, size, device):
     preprocessor = preprocess(size)
     
     img = Image.fromarray(img)
@@ -36,3 +36,12 @@ def runModel(model, img, size, device):
         c = (landmark[i * 2], landmark[i * 2 + 1])
         points.append(c)
     return points
+
+def runModel(model, img, size, device):
+    preprocessor = preprocess(size)
+    
+    img = Image.fromarray(img)
+    img = preprocessor(img)
+    
+    res = model(torch.unsqueeze(img.to(device), 0)).cpu().detach().numpy()
+    return res

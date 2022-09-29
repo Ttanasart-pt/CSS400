@@ -1,3 +1,4 @@
+from email import header
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -39,7 +40,6 @@ class Hourglass(nn.Module):
             nn.MaxPool2d(2),
         )
 
-    
     def upSample(self, in_channel, out_channel):
         return nn.Sequential(
             nn.Upsample(scale_factor = 2),
@@ -48,26 +48,40 @@ class Hourglass(nn.Module):
         )
         
     def forward(self, x):
-        #print(f"{x.shape = }")
         ds0 = self.down[0](x)
-        #print(f"{ds0.shape = }")
         ds1 = self.down[1](ds0)
-        #print(f"{ds1.shape = }")
         
         bottle = self.bottleneck(ds1)
-        #print(f"{bottle.shape = }")
         
         du1 = self.up[0](bottle + ds1)
-        #print(f"{du1.shape = }")
-        
         du0 = self.up[1](du1 + ds0)
-        #print(f"{du0.shape = }")
         
         sup  = self.interSup1(du0)
         heat = self.heatmap(sup)
         heas = self.heatSup(heat)
         out  = self.interSup2(sup + heas)
         
+        return out
+    
+class Model(nn.Module):
+    def __init__(self, num_class = 21):
+        super(Model, self).__init__()
+        
+        self.num_class = num_class
+        self.hourglasses = []
+        
+        for _ in range(num_class):
+            self.hourglasses.append(Hourglass())
+
+    def forward(self, x):
+        pHeat = []
+        
+        curr = x
+        for hr in self.hourglasses:
+            out  = hr(curr)
+            pHeat.append(out)
+            curr = out
+            
         return out
     
 if __name__ == "__main__":
