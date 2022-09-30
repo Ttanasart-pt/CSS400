@@ -1,7 +1,7 @@
 #from homebrew.CNN import Model
 #from mobilenet.model import Model
 #from hourglass.model import Model
-from Zimmerman.handSegNet import Model
+from colorHandPose.handSegNet import Model
 
 import torch
 import torch.nn as nn

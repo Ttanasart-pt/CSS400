@@ -82,7 +82,7 @@ class Model(nn.Module):
             pHeat.append(out)
             curr = out
             
-        return out
+        return torch.tensor(pHeat)
     
 if __name__ == "__main__":
     model = Hourglass().to(device)
