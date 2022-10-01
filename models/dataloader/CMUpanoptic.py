@@ -10,6 +10,8 @@ from util.transforms import preprocess
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+import warnings
+warnings.filterwarnings("ignore", category = UserWarning) 
 
 class CMUDataset(Dataset):
     def __init__(self, root, size) -> None:
@@ -51,7 +53,15 @@ class CMUDataset(Dataset):
             label_json = json.load(f)
         
         hand_label = [lm[:2] for lm in label_json['hand_pts']]
-        transformed = self.pretransform(image = image, keypoints = hand_label)
+        hl = []
+        for h in hand_label:
+            x = h[0]
+            y = h[1]
+            if x > 0 and x < image.shape[1] and y > 0 and y < image.shape[0]:
+                hl.append((x, y))
+            else:
+                hl.append((0, 0))
+        transformed = self.pretransform(image = image, keypoints = hl)
         
         img = transformed['image'] 
         kp = transformed['keypoints']
@@ -74,25 +84,38 @@ class CMUDataset(Dataset):
         y_min = round(max(0, y_min - py0))
         x_max = round(min(img.shape[1], x_max + px1))
         y_max = round(min(img.shape[0], y_max + py1))
-        
+        x_min, x_max = min(x_min, x_max), max(x_min, x_max)
+        y_min, y_max = min(y_min, y_max), max(y_min, y_max)
         img = A.crop(img, x_min, y_min, x_max, y_max)
-        for i, k in enumerate(kp):
-            kp[i] = (k[0] - x_min, k[1] - y_min)
+        _kp = []
+        for k in kp:
+            x = k[0] - x_min
+            y = k[1] - y_min
+            if x > 0 and x < img.shape[1] and y > 0 and y < img.shape[0]:
+                _kp.append((x, y))
+            else:
+                _kp.append((0, 0))
         
-        transformed = self.transform(image = img, keypoints = kp)
+        transformed = self.transform(image = img, keypoints = _kp)
         return transformed['image'], transformed['keypoints']
 
 class CMUHeatmapDataset(CMUDataset):
-    def gaussian(self, pos, sigma = 5):
+    def gaussian(self, pos, sigma = 8):
         x, y = pos
-        hm = [ np.exp(-((c - x) ** 2 + (r - y) ** 2) / (2 * sigma ** 2)) for r in range(self.size) for c in range(self.size) ]
+        if(pos == (0, 0)):
+            hm = np.zeros((self.size, self.size))
+        else:
+            hm = [ np.exp(-((c - x) ** 2 + (r - y) ** 2) / (2 * sigma ** 2)) for r in range(self.size) for c in range(self.size) ]
         hm = np.array(hm, dtype = np.float32)
         hm = np.reshape(hm, newshape = (self.size, self.size))
         return hm
 
     def __getitem__(self, index):
         image, hand_label = super().__getitem__(index)
-        hms = torch.tensor([self.gaussian(lm) for lm in hand_label])
+        for _ in range(21 - len(hand_label)):
+            hand_label.append((0, 0))
+        hms = np.array([self.gaussian(lm) for lm in hand_label])
+        hms = torch.tensor(hms)
         return image, hms
 
 class CMUBBoxDataset(CMUDataset):

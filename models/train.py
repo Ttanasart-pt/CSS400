@@ -1,7 +1,7 @@
 #from homebrew.CNN import Model
 #from mobilenet.model import Model
-#from hourglass.model import Model
-from colorHandPose.handSegNet import Model
+from hourglass.model import Model
+#from colorHandPose.handSegNet import Model
 
 import torch
 import torch.nn as nn
@@ -66,7 +66,8 @@ def main():
             imgs = imgs.type(torch.FloatTensor).to(device)
             labels = labels.type(torch.FloatTensor).to(device)
             
-            predicted = model(imgs)
+            predicted = model(imgs).to(device)
+            
             loss = criterion(predicted, labels)
             acc_loss += loss
             

@@ -23,8 +23,8 @@ class Hourglass(nn.Module):
         self.bottleneck = nn.Conv2d(16, 16, 1)
         
         self.interSup1  = nn.Conv2d(8, 8, 1)
-        self.heatmap    = nn.Conv2d(8, 3, 1)
-        self.heatSup    = nn.Conv2d(3, 8, 1)
+        self.heatmap    = nn.Conv2d(8, 1, 1)
+        self.heatSup    = nn.Conv2d(1, 8, 1)
         self.interSup2  = nn.Conv2d(8, 3, 1)
         
     def downSample(self, in_channel, out_channel, stride = 1):
@@ -61,28 +61,27 @@ class Hourglass(nn.Module):
         heas = self.heatSup(heat)
         out  = self.interSup2(sup + heas)
         
-        return out
+        return out, heat
     
 class Model(nn.Module):
-    def __init__(self, num_class = 21):
+    def __init__(self, num_class = 21, device = "cuda"):
         super(Model, self).__init__()
         
         self.num_class = num_class
-        self.hourglasses = []
-        
+        self.hourglasses = nn.ModuleList()
         for _ in range(num_class):
-            self.hourglasses.append(Hourglass())
+            self.hourglasses.append(Hourglass().to(device))
 
     def forward(self, x):
-        pHeat = []
+        pHeat = torch.zeros((x.shape[0], self.num_class, x.shape[2], x.shape[3]))
         
         curr = x
-        for hr in self.hourglasses:
-            out  = hr(curr)
-            pHeat.append(out)
+        for i, hr in enumerate(self.hourglasses):
+            out, heat = hr(curr)
+            pHeat[:, i, :, :] = heat.squeeze()
             curr = out
             
-        return torch.tensor(pHeat)
+        return pHeat
     
 if __name__ == "__main__":
     model = Hourglass().to(device)
