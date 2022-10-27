@@ -1,9 +1,3 @@
-#from homebrew.CNN import Model
-#from mobilenet.model import Model
-#from hourglass.model import Model
-#from colorHandPose.handSegNet import HandSegNet as Model
-from colorHandPose.posenet import PoseNet as Model
-
 import torch
 import numpy as np
 import cv2
@@ -11,6 +5,7 @@ import torch
 from util.tester import runModel, runModelKeypoint
 from util.checkpoint import load_checkpoint
 from util.segment import calc_center_bb
+import modelLoader
 
 import yaml
 import argparse
@@ -24,7 +19,7 @@ with open(args.config, 'r') as f:
     
 def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = Model().to(device)
+    model = modelLoader.loadFromConfig(CONFIG).to(device)
     
     if CONFIG['checkpoint']:
         checkpoint_path = CONFIG['checkpoint']

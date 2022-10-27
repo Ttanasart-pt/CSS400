@@ -1,8 +1,3 @@
-#from homebrew.CNN import Model
-#from mobilenet.model import Model
-from hourglass.model import Model
-#from colorHandPose.handSegNet import Model
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,6 +7,7 @@ from torchsummary import summary
 from tqdm import tqdm
 from dataloader.CMUpanoptic import CMUDataset, CMUHeatmapDataset, CMUBBoxDataset, CMUHandSegment
 from util.checkpoint import save_checkpoint, load_checkpoint
+import modelLoader
 
 import yaml
 import argparse
@@ -43,7 +39,7 @@ def main():
     elif(CONFIG['output_type'] == "segment"):
         dataset = CMUHandSegment(CONFIG['dataset'], imageSize)
         
-    model = Model().to(device)
+    model = modelLoader.loadFromConfig(CONFIG).to(device)
         
     if(load_model):
         load_checkpoint(checkpoint_path, model)

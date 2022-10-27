@@ -3,9 +3,10 @@ batch_size: 8
 input_size: 224
 epoch: 100
 
-dataset: "E:/HandPose/CMU/hand_syn/synth1"
+dataset: "E:/Dataset/CMU/hand_syn/synth1"
 checkpoint: "hourglass/checkpoints/test.chk"
 save_model: True
 load_model: True
 
+model: "hourglass"
 output_type: "heatmap"

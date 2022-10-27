@@ -3,9 +3,10 @@ batch_size: 32
 input_size: 256
 epoch: 100
 
-dataset: "E:/HandPose/CMU/hand_manual/manual_train"
+dataset: "E:/Dataset/CMU/hand_manual/manual_train"
 checkpoint: "colorHandPose/checkpoints/seg.pth.tar"
 save_model: False
 load_model: False
 
+model: "colorHandPose_handSeg"
 output_type: "segment"

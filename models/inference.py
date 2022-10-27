@@ -1,13 +1,10 @@
-#from homebrew.CNN import Model
-#from mobilenet.model import Model
-from hourglass.model import Model
-
 import torch
 from util.tester import testModel
 from util.checkpoint import load_checkpoint
 
 import yaml
 import argparse
+import modelLoader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', help='Path to config file.')
@@ -21,7 +18,7 @@ def inference():
     imageSize = 128
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    model = Model().to(device)
+    model = modelLoader.loadFromConfig(CONFIG).to(device)
 
     load_checkpoint(checkpoint_path, model)
     testModel(model, "E:\\HandPose\\CMU\\hand_syn\\synth1\\0001.jpg", imageSize, device, "mobilenet/sample/testImg")
