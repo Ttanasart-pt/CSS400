@@ -92,11 +92,11 @@ def main():
         c = cv2.waitKey(1)
         if c == 27:
             break
-
+            
     cap.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
-    
+
 # example uses: python .\webcam.py --config "homebrew/train.yaml"

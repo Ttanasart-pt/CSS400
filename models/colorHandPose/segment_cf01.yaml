@@ -1,0 +1,14 @@
+learning_rate: 4.e-2
+batch_size: 16
+input_size: 256
+epoch: 100
+
+dataset: "E:/Dataset/CMU/hand_manual/crop/train"
+checkpoint: "colorHandPose/checkpoints/segment_cf01_e100.pth.tar"
+save_model: True
+load_model: False
+
+model: "colorHandPose_handSeg"
+output_type: "segment_RHD"
+
+report: "colorHandPose/report/cf1/"
