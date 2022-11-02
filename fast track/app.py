@@ -16,6 +16,8 @@ from hand import Hand
 import cvpainter
 import brush
 
+import filled_shape as fs
+
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -84,7 +86,9 @@ class camApp(ttk.Frame):
         self.laserThickness = 5
         self.laserColor = (255., 0., 0.)
         self.drawLastPos = None
-        
+        self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
+        self.drawnShape = np.zeros((480, 640, 3), dtype = np.uint8)
+
         self.canvasSurface = None
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
         
@@ -104,6 +108,7 @@ class camApp(ttk.Frame):
         self.strokeDrawer.setSurface(self.canvasSurface)
     
     def frameAnalyze(self, img):
+        img = cv2.flip(img, 1)
         results = self.detector.process(img)
         self.surfaceCheck(img)
         
@@ -125,13 +130,25 @@ class camApp(ttk.Frame):
                         cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
                     self.drawLastPos = fingerPos
                     self.strokeDrawer.record(fingerPos)
+                    if(fingerPos.x < 640 and fingerPos.y < 480):
+                        self.drawnPoints[fingerPos.y][fingerPos.x] = 255
+                        for i in range (0, 3):
+                            for j in range (0, 3):
+                                if(fingerPos.y+i < 480 and fingerPos.x+j < 640 and fingerPos.y-i > 0 and fingerPos.x-j > 0):
+                                    self.drawnPoints[fingerPos.y + i][fingerPos.x-j] = 255
+                                    self.drawnPoints[fingerPos.y + i][fingerPos.x+j] = 255
+                                    self.drawnPoints[fingerPos.y -i][fingerPos.x-j] = 255
+                                    self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
                 else:
                     self.drawLastPos = None
                     self.strokeDrawer.release()
+                    self.drawnShape = fs.capture(self.drawnPoints, True)
+                    self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
-        
         imgB = cv2.addWeighted(img, 1, self.laserPointerSurface, 1, 0.0)
+        if self.drawnShape.nonzero()[0].size != 0:
+            self.canvasSurface = self.drawnShape
         imgB = cv2.addWeighted(imgB, 1, self.canvasSurface, 1, 0.0)
         return imgB
     
@@ -179,6 +196,8 @@ class camApp(ttk.Frame):
                 
                 now = time.time_ns()
                 self.frameTime = now - startTime
+
+                
     
     def onClose(self):
         print("Closing...")  
