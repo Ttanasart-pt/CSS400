@@ -2,8 +2,8 @@ from PIL import Image
 import os
 import numpy as np
 import torch
+import cv2
 from torch.utils.data import Dataset
-from util.transforms import preprocess
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -15,20 +15,20 @@ class RHDSegment(Dataset):
         super(RHDSegment, self).__init__()
         
         self.root = root
-        self.dir_clr = self.root + 'color'
-        self.dir_msk = self.root + 'mask'
+        self.dir_clr = self.root + 'color/'
+        self.dir_msk = self.root + 'mask/'
         
         self.files = [f[:-4] for f in os.listdir(self.dir_clr)]
         self.size = size
         
         self.transform = A.Compose(
             [
-                A.HorizontalFlip(p = 0.5),
-                A.ShiftScaleRotate(p = 0.5),
-                A.Resize(size, size),
+                # A.HorizontalFlip(p = 0.5),
+                # A.ShiftScaleRotate(p = 0.5),
+                A.RandomCrop(size, size),
+                # A.Resize(size, size),
                 ToTensorV2()
             ],
-            additional_targets = { 'mask': 'mask' }
         )
 
     def __getitem__(self, index):
@@ -38,12 +38,13 @@ class RHDSegment(Dataset):
         
         img = np.array(Image.open(pth_img))
         msk = np.array(Image.open(pth_msk))
+        _, msk = cv2.threshold(msk, 1, 255, cv2.THRESH_BINARY)
         
         transformed = self.transform(image = img, mask = msk)
         imgT = transformed['image']
         mskT = transformed['mask']
         
-        return imgT, mskT
+        return imgT, mskT / 255
 
     def __len__(self):
         return len(self.files)

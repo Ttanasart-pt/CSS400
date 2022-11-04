@@ -64,10 +64,15 @@ def main():
             p0 = (round(bbox[0][0] * sw), round(bbox[0][1] * sh))
             p1 = (round(p0[0] + bbox[1][0] * sw), round(p0[1] + bbox[1][1] * sh))
             frame = cv2.rectangle(frame, p0, p1, (255, 0, 0), 2)
-        elif CONFIG['output_type'] == "segment" : 
+        elif "segment" in CONFIG['output_type'] : 
             segment = runModel(model, frame, imageSize, device)
             #print(segment.shape)
-            segment = segment.argmax(0).astype(np.float32)
+            sg0 = segment[0].astype(np.float32)
+            sg1 = segment[1].astype(np.float32)
+            segment = segment.argmax(0).astype(np.float32) * 255
+            
+            sg0 = cv2.resize(sg0, (size[1], size[0]))
+            sg1 = cv2.resize(sg1, (size[1], size[0]))
             segment = cv2.resize(segment, (size[1], size[0]))
             
             non_zero = segment.nonzero()
@@ -81,10 +86,18 @@ def main():
             except Exception:
                 pass
             
+            sg0 = cv2.cvtColor(sg0, cv2.COLOR_GRAY2BGR)
+            sg0 = (sg0 * 255).astype(np.uint8)
+            sg1 = cv2.cvtColor(sg1, cv2.COLOR_GRAY2BGR)
+            sg1 = (sg1 * 255).astype(np.uint8)
+            
             segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
             segment = (segment * 255).astype(np.uint8)
             
-            frame = np.concatenate((frame, segment), 1)
+            sg = np.concatenate((sg0, sg1), 1)
+            fr = np.concatenate((frame, segment), 1)
+            
+            frame = np.concatenate((fr, sg), 0)
             #cv2.addWeighted(frame, 1, segment, 1, 1)
             
         cv2.imshow('Input', frame)

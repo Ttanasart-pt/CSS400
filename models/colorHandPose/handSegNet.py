@@ -24,41 +24,42 @@ class HandSegNet(nn.Module):
 
         super(HandSegNet, self).__init__()
         
-        chs = chs or [3, 64, 64, 'mp', 128, 128, 'mp', 256, 256, 256, 256, 'mp', 512, 512, 512, 512, 512, 128]
+        # chs = chs or [3, 64, 64, 'mp', 128, 128, 'mp', 256, 256, 256, 256, 'mp', 512, 512, 512, 512, 512, 128]
         
-        self.layers = []
+        # self.layers = []
         
-        ch = chs[0]
-        for c in chs[1:]:
-            if c == "mp":
-                self.layers.append(nn.MaxPool2d(2, 2))
-            else:
-                self.layers.append(self.conv(ch, c))
-                ch = c
+        # ch = chs[0]
+        # for c in chs[1:]:
+        #     if c == "mp":
+        #         self.layers.append(nn.MaxPool2d(2, 2))
+        #     else:
+        #         self.layers.append(self.conv(ch, c))
+        #         ch = c
         
-        self.layers.append(self.conv(ch, 512, 1))
-        self.layers.append(self.conv(512, 2, 1))
-        self.layers.append(nn.MaxPool2d(2, 2))
+        # self.layers.append(self.conv(ch, 512, 1))
+        # self.layers.append(self.conv(512, 2, 1))
+        # self.layers.append(nn.MaxPool2d(2, 2))
+        # self.layers.append(nn.Sigmoid())
         
-        self.layers = nn.Sequential(*self.layers)
+        # self.layers = nn.Sequential(*self.layers)
         
-        # self.conv1_1 = nn.Conv2d(3, 64, 3, padding=1)
-        # self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
-        # self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
-        # self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
-        # self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
-        # self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
-        # self.conv3_3 = nn.Conv2d(256, 256, 3, padding=1)
-        # self.conv3_4 = nn.Conv2d(256, 256, 3, padding=1)
-        # self.conv4_1 = nn.Conv2d(256, 512, 3, padding=1)
-        # self.conv4_2 = nn.Conv2d(512, 512, 3, padding=1)
-        # self.conv4_3 = nn.Conv2d(512, 512, 3, padding=1)
-        # self.conv4_4 = nn.Conv2d(512, 512, 3, padding=1)
-        # self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
-        # self.conv5_2 = nn.Conv2d(512, 128, 3, padding=1)
-        # self.conv6_1 = nn.Conv2d(128, 512, 1)
-        # self.conv6_2 = nn.Conv2d(512, 2, 1)
-        # self.pool = nn.MaxPool2d(2, 2)
+        self.conv1_1 = nn.Conv2d(3, 64, 3, padding=1)
+        self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
+        self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv3_3 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv3_4 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv4_1 = nn.Conv2d(256, 512, 3, padding=1)
+        self.conv4_2 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv4_3 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv4_4 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_2 = nn.Conv2d(512, 128, 3, padding=1)
+        self.conv6_1 = nn.Conv2d(128, 512, 1)
+        self.conv6_2 = nn.Conv2d(512, 2, 1)
+        self.pool = nn.MaxPool2d(2, 2)
 
     def forward(self, x):
         """Forward pass through the hand segementation network.
@@ -71,26 +72,26 @@ class HandSegNet(nn.Module):
         """
 
         s = x.shape
-        # x = F.leaky_relu(self.conv1_1(x)) # 1
-        # x = F.leaky_relu(self.conv1_2(x)) # 2
-        # x = self.pool(x)          # 3
-        # x = F.leaky_relu(self.conv2_1(x)) # 4
-        # x = F.leaky_relu(self.conv2_2(x)) # 5
-        # x = self.pool(x)          # 6
-        # x = F.leaky_relu(self.conv3_1(x)) # 7
-        # x = F.leaky_relu(self.conv3_2(x)) # 8
-        # x = F.leaky_relu(self.conv3_3(x)) # 9
-        # x = F.leaky_relu(self.conv3_4(x)) # 10
-        # x = self.pool(x)          # 11
-        # x = F.leaky_relu(self.conv4_1(x)) # 12
-        # x = F.leaky_relu(self.conv4_2(x)) # 13
-        # x = F.leaky_relu(self.conv4_3(x)) # 14
-        # x = F.leaky_relu(self.conv4_4(x)) # 15
-        # x = F.leaky_relu(self.conv5_1(x)) # 16
-        # x = F.leaky_relu(self.conv5_2(x))
-        # x = F.leaky_relu(self.conv6_1(x))
-        # x = self.conv6_2(x)         # 17
-        x = self.layers(x)
+        x = F.leaky_relu(self.conv1_1(x)) # 1
+        x = F.leaky_relu(self.conv1_2(x)) # 2
+        x = self.pool(x)          # 3
+        x = F.leaky_relu(self.conv2_1(x)) # 4
+        x = F.leaky_relu(self.conv2_2(x)) # 5
+        x = self.pool(x)          # 6
+        x = F.leaky_relu(self.conv3_1(x)) # 7
+        x = F.leaky_relu(self.conv3_2(x)) # 8
+        x = F.leaky_relu(self.conv3_3(x)) # 9
+        x = F.leaky_relu(self.conv3_4(x)) # 10
+        x = self.pool(x)          # 11
+        x = F.leaky_relu(self.conv4_1(x)) # 12
+        x = F.leaky_relu(self.conv4_2(x)) # 13
+        x = F.leaky_relu(self.conv4_3(x)) # 14
+        x = F.leaky_relu(self.conv4_4(x)) # 15
+        x = F.leaky_relu(self.conv5_1(x)) # 16
+        x = F.leaky_relu(self.conv5_2(x))
+        x = F.leaky_relu(self.conv6_1(x))
+        x = self.conv6_2(x)         # 17
+        # x = self.layers(x)
         x = F.interpolate(x, s[2], mode='bilinear', align_corners=False) # 18
 
         return x.squeeze()
