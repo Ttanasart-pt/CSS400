@@ -9,5 +9,8 @@ def loadFromConfig(config):
         from hourglass.model import Model
     elif config['model'] == "mobilenet":
         from mobilenet.model import Model
-    
+    elif config['model'] == "FPN":
+        from handSegment.model import PetModel
+        return PetModel("FPN", "resnet34", in_channels=3, out_classes=1)
+        
     return Model()

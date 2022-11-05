@@ -91,7 +91,6 @@ class HandSegNet(nn.Module):
         x = F.leaky_relu(self.conv5_2(x))
         x = F.leaky_relu(self.conv6_1(x))
         x = self.conv6_2(x)         # 17
-        # x = self.layers(x)
         x = F.interpolate(x, s[2], mode='bilinear', align_corners=False) # 18
 
         return x.squeeze()

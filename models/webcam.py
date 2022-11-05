@@ -6,6 +6,14 @@ from util.tester import runModel, runModelKeypoint
 from util.checkpoint import load_checkpoint
 from util.segment import calc_center_bb
 import modelLoader
+from util.transforms import preprocess
+from torch.utils.data import DataLoader
+from PIL import Image
+
+from dataloader.RHD import RHDSegment
+train_dataset = RHDSegment("E:/Dataset/RHD_published_v2/training/", 256)
+train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+batch = next(iter(train_dataloader))
 
 import yaml
 import argparse
@@ -24,8 +32,10 @@ def main():
     if CONFIG['checkpoint']:
         checkpoint_path = CONFIG['checkpoint']
         load_checkpoint(checkpoint_path, model)
-    imageSize = CONFIG['input_size']
+    model.eval()
     
+    imageSize = CONFIG['input_size']
+    preprocessor = preprocess(imageSize)
     cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
@@ -54,16 +64,45 @@ def main():
             srf = (srf * 255).astype(np.uint8)
             
             frame = np.concatenate((frame, srf), 1)
+            
         elif CONFIG['output_type'] == "keypoints" :
             lms = runModelKeypoint(model, frame, imageSize, device)
             for lm in lms:
                 c = (round(lm[0] * sw), round(lm[1] * sh))
                 frame = cv2.circle(frame, c, 2, (255, 0, 0), -1)
+                
         elif CONFIG['output_type'] == "bbox" :  
             bbox = runModel(model, frame, imageSize, device)
             p0 = (round(bbox[0][0] * sw), round(bbox[0][1] * sh))
             p1 = (round(p0[0] + bbox[1][0] * sw), round(p0[1] + bbox[1][1] * sh))
             frame = cv2.rectangle(frame, p0, p1, (255, 0, 0), 2)
+            
+        elif CONFIG['output_type'] == "light_segment" : 
+            img = Image.fromarray(frame)
+            img = preprocessor(img) * 255
+            img = torch.unsqueeze(img.to(device), 0)
+            
+            with torch.no_grad():
+                logits = model(img)
+            segment = logits.sigmoid().detach().cpu().numpy().squeeze()
+            segment = cv2.resize(segment, (size[1], size[0]))
+            segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
+            segment = (segment * 255).astype(np.uint8)
+            _, segment = cv2.threshold(segment, 250, 255, cv2.THRESH_BINARY)
+            
+            non_zero = segment.nonzero()
+            padding = 16
+            try:
+                y_min = non_zero[0].min() - padding
+                x_min = non_zero[1].min() - padding
+                y_max = non_zero[0].max() + padding
+                x_max = non_zero[1].max() + padding
+                frame = cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
+            except Exception:
+                pass
+            
+            frame = np.concatenate((frame, segment), 1)
+            
         elif "segment" in CONFIG['output_type'] : 
             segment = runModel(model, frame, imageSize, device)
             #print(segment.shape)
