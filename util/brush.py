@@ -1,5 +1,5 @@
-from geometry import Point
-import cvpainter
+from util.geometry import Point
+import util.cvpainter as painter
 import cv2
 
 class Stroke():
@@ -31,7 +31,7 @@ class Stroke():
             if(Point.distance(op, p) < self.anchorMinDistance):
                 continue
             
-            cvpainter.draw_line(self.surface, op, p, self.thickness, self.color)
+            painter.draw_line(self.surface, op, p, self.thickness, self.color)
             op = p
     
     def release(self):

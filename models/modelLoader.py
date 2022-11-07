@@ -7,6 +7,9 @@ def loadFromConfig(config):
         from homebrew.CNN import Model
     elif config['model'] == "hourglass":
         from hourglass.model import Model
+    elif config['model'] == "hourglass_def":
+        from hourglass.hrglass import create_hourglass_net
+        return create_hourglass_net()
     elif config['model'] == "mobilenet":
         from mobilenet.model import Model
     elif config['model'] == "FPN":

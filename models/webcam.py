@@ -5,7 +5,7 @@ import torch
 from util.tester import runModel, runModelKeypoint
 from util.checkpoint import load_checkpoint
 from util.segment import calc_center_bb
-import modelLoader
+from modelLoader import loadFromConfig
 from util.transforms import preprocess
 from torch.utils.data import DataLoader
 from PIL import Image
@@ -19,127 +19,140 @@ import yaml
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', help='Path to config file.')
+parser.add_argument('--segment', help='Path to segment config.')
+parser.add_argument('--keypoints', help='Path to keypoint config.')
 
 args = parser.parse_args()
-with open(args.config, 'r') as f:
-    CONFIG = yaml.safe_load(f.read())
+with open(args.segment, 'r') as f:
+    SEGMENT = yaml.safe_load(f.read())
+with open(args.keypoints, 'r') as f:
+    KEYPOINTS = yaml.safe_load(f.read())
     
 def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = modelLoader.loadFromConfig(CONFIG).to(device)
+    segment_model = loadFromConfig(SEGMENT).to(device)
+    keypoint_model = loadFromConfig(KEYPOINTS).to(device)
     
-    if CONFIG['checkpoint']:
-        checkpoint_path = CONFIG['checkpoint']
-        load_checkpoint(checkpoint_path, model)
-    model.eval()
+    if SEGMENT['checkpoint']:
+        load_checkpoint(SEGMENT['checkpoint'], segment_model)
+    segment_model.eval()
     
-    imageSize = CONFIG['input_size']
+    if KEYPOINTS['checkpoint']:
+        load_checkpoint(KEYPOINTS['checkpoint'], keypoint_model)
+    keypoint_model.eval()
+    
+    imageSize = SEGMENT['input_size']
+    detectSize = KEYPOINTS['input_size']
     preprocessor = preprocess(imageSize)
     cap = cv2.VideoCapture(0)
+    padding = 32
+    
+    erode = np.ones((5,5), np.uint8)
 
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
 
     while True:
         _, frame = cap.read()
-        
         size = frame.shape[:2]
-        sw = size[0] / imageSize
-        sh = size[1] / imageSize
         
-        if CONFIG['output_type'] == "heatmap" :
-            hms = runModel(model, frame, imageSize, device)[0]
-            srf = np.zeros(size).astype(np.float32)
-            for hm in hms:
-                _hm = cv2.resize(hm, (size[1], size[0]), cv2.INTER_LINEAR)
-                am = np.argmax(_hm)
-                x = am % size[0]
-                y = am // size[0]
-                
-                frame = cv2.circle(frame, (x, y), 4, (255, 0, 0))
-                srf += _hm
-            srf = (srf - srf.min()) / (srf.max() - srf.min())
-            srf = cv2.cvtColor(srf, cv2.COLOR_GRAY2BGR)
-            srf = (srf * 255).astype(np.uint8)
-            
-            frame = np.concatenate((frame, srf), 1)
-            
-        elif CONFIG['output_type'] == "keypoints" :
-            lms = runModelKeypoint(model, frame, imageSize, device)
-            for lm in lms:
-                c = (round(lm[0] * sw), round(lm[1] * sh))
-                frame = cv2.circle(frame, c, 2, (255, 0, 0), -1)
-                
-        elif CONFIG['output_type'] == "bbox" :  
-            bbox = runModel(model, frame, imageSize, device)
-            p0 = (round(bbox[0][0] * sw), round(bbox[0][1] * sh))
-            p1 = (round(p0[0] + bbox[1][0] * sw), round(p0[1] + bbox[1][1] * sh))
-            frame = cv2.rectangle(frame, p0, p1, (255, 0, 0), 2)
-            
-        elif CONFIG['output_type'] == "light_segment" : 
+        segment = np.zeros(frame.shape).astype(np.uint8)
+        handBBox = None
+        
+        topLeft = frame
+        topRight = np.zeros((size[0], size[1], 3)).astype(np.uint8)
+        bottomLeft = np.zeros((size[0], size[1], 3)).astype(np.uint8)
+        bottomRight = np.zeros((size[0], size[1], 3)).astype(np.uint8)
+        
+        if SEGMENT['output_type'] == "light_segment" : 
             img = Image.fromarray(frame)
             img = preprocessor(img) * 255
             img = torch.unsqueeze(img.to(device), 0)
             
             with torch.no_grad():
-                logits = model(img)
+                logits = segment_model(img)
             segment = logits.sigmoid().detach().cpu().numpy().squeeze()
             segment = cv2.resize(segment, (size[1], size[0]))
-            segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
             segment = (segment * 255).astype(np.uint8)
-            _, segment = cv2.threshold(segment, 250, 255, cv2.THRESH_BINARY)
+            _, segment = cv2.threshold(segment, 200, 255, cv2.THRESH_BINARY)
+            segment = cv2.erode(segment, erode)
+            segment = cv2.dilate(segment, erode)
+            cnt, _ = cv2.findContours(segment, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
             
-            non_zero = segment.nonzero()
-            padding = 16
-            try:
-                y_min = non_zero[0].min() - padding
-                x_min = non_zero[1].min() - padding
-                y_max = non_zero[0].max() + padding
-                x_max = non_zero[1].max() + padding
-                frame = cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
-            except Exception:
-                pass
+            if cnt:
+                x, y, w, h = cv2.boundingRect(cnt[0])
+                handBBox = [x - padding, y - padding, x + w + padding, y + h + padding]
+        
+        elif SEGMENT['output_type'] == "bbox" :  
+            bbox = runModel(segment_model, frame, imageSize, device)
+            p0 = (round(bbox[0][0] * size[1] / imageSize), round(bbox[0][1] * size[0] / imageSize))
+            p1 = (round(p0[0] + bbox[1][0] * size[1] / imageSize), round(p0[1] + bbox[1][1] * size[0] / imageSize))
+            handBBox = [p0[0], p0[1], p1[0], p1[1]]
             
-            frame = np.concatenate((frame, segment), 1)
-            
-        elif "segment" in CONFIG['output_type'] : 
-            segment = runModel(model, frame, imageSize, device)
-            #print(segment.shape)
-            sg0 = segment[0].astype(np.float32)
-            sg1 = segment[1].astype(np.float32)
+        else : 
+            segment = runModel(segment_model, frame, imageSize, device)
             segment = segment.argmax(0).astype(np.float32) * 255
-            
-            sg0 = cv2.resize(sg0, (size[1], size[0]))
-            sg1 = cv2.resize(sg1, (size[1], size[0]))
             segment = cv2.resize(segment, (size[1], size[0]))
             
             non_zero = segment.nonzero()
-            padding = 16
             try:
                 y_min = non_zero[0].min() - padding
                 x_min = non_zero[1].min() - padding
                 y_max = non_zero[0].max() + padding
                 x_max = non_zero[1].max() + padding
-                frame = cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
+                handBBox = [x_min, y_min, x_max, y_max]
             except Exception:
                 pass
             
-            sg0 = cv2.cvtColor(sg0, cv2.COLOR_GRAY2BGR)
-            sg0 = (sg0 * 255).astype(np.uint8)
-            sg1 = cv2.cvtColor(sg1, cv2.COLOR_GRAY2BGR)
-            sg1 = (sg1 * 255).astype(np.uint8)
-            
             segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
             segment = (segment * 255).astype(np.uint8)
+        topRight = segment
+        
+        if handBBox:
+            x_min, y_min, x_max, y_max = handBBox
+            handImg = frame[y_min : y_max, x_min : x_max, :]
+            frame = cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
             
-            sg = np.concatenate((sg0, sg1), 1)
-            fr = np.concatenate((frame, segment), 1)
+            width = handImg.shape[1]
+            height = handImg.shape[0]
             
-            frame = np.concatenate((fr, sg), 0)
-            #cv2.addWeighted(frame, 1, segment, 1, 1)
+            handIso = np.zeros((size[0], size[1], 3)).astype(np.uint8)
+            handIso[y_min : y_max, x_min : x_max, :] = handImg
+            bottomLeft = handIso
             
-        cv2.imshow('Input', frame)
+            if width > 0 and height > 0:
+                if KEYPOINTS['output_type'] == "heatmap" :
+                    srf = np.zeros(size).astype(np.float32)
+                    hms = runModel(segment_model, frame, detectSize, device)[0]
+                    for hm in hms:
+                        _hm = cv2.resize(hm, (width, height), cv2.INTER_LINEAR)
+                        am = np.argmax(_hm)
+                        x = am % width + x_min
+                        y = am // width + y_min
+                        
+                        frame = cv2.circle(frame, (x, y), 4, (255, 0, 0))
+                        
+                        srf[y_min : y_max, x_min : x_max] += _hm
+                    srf = (srf - srf.min()) / (srf.max() - srf.min())
+                    srf = cv2.cvtColor(srf, cv2.COLOR_GRAY2BGR)
+                    srf = (srf * 255).astype(np.uint8)
+                    srf = cv2.rectangle(srf, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
+                    
+                    bottomRight = srf
+                    
+                elif KEYPOINTS['output_type'] == "keypoints" :
+                    lms = runModelKeypoint(segment_model, frame, detectSize, device)
+                    for lm in lms:
+                        c = (round(lm[0] * width / detectSize), round(lm[1] * height / detectSize))
+                        frame = cv2.circle(frame, c, 2, (255, 0, 0), -1)    
+                    frame = np.concatenate((frame, segment), 1)
+        
+        top = np.concatenate((topLeft, topRight), 1)
+        bot = np.concatenate((bottomLeft, bottomRight), 1)
+        
+        con = np.concatenate((top, bot), 0)
+        cv2.imshow('Input', con)
         
         c = cv2.waitKey(1)
         if c == 27:
@@ -151,4 +164,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# example uses: python .\webcam.py --config "homebrew/train.yaml"
+# example uses: python .\webcam.py --segment .\handSegment\segment_cf01_RHD.yaml --keypoints .\hourglass\train.yaml

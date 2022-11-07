@@ -69,6 +69,7 @@ class PoseNet(nn.Module):
             [batch x 21 x 32 x 32] hand keypoint heatmaps.
         """
 
+        s = x.shape
         # Stage 1
         x = F.leaky_relu(self.conv1_1(x)) # 1
         x = F.leaky_relu(self.conv1_2(x)) # 2
@@ -110,5 +111,7 @@ class PoseNet(nn.Module):
         x = F.leaky_relu(self.conv7_5(x))
         x = F.leaky_relu(self.conv7_6(x))
         x = self.conv7_7(x)
+        
+        x = F.interpolate(x, s[2], mode='bilinear', align_corners=False) # 18
 
         return x

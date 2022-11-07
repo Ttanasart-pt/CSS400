@@ -1,5 +1,4 @@
-from operator import index
-from geometry import Point
+from util.geometry import Point
 import mediapipe as mp
 
 mp_hands = mp.solutions.hands

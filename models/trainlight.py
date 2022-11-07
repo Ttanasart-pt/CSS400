@@ -23,7 +23,7 @@ def main():
     trainer = pl.Trainer(
         accelerator = 'gpu', 
         devices = 1,
-        max_epochs = 2,
+        max_epochs = 10,
         default_root_dir = "handSegment"
     )
 

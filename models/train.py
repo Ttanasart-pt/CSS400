@@ -61,7 +61,7 @@ def main():
     if(load_model):
         load_checkpoint(checkpoint_path, model)
         
-    summary(model, (3, imageSize, imageSize))
+    #summary(model, (3, imageSize, imageSize))
     dataloader = DataLoader(dataset, 
                         batch_size = batch_size,
                         shuffle = True, 
@@ -69,9 +69,9 @@ def main():
                         pin_memory = True)
     
     if("segment" in CONFIG['output_type']):
-        loss = nn.CrossEntropyLoss()
+        lossFunc = nn.CrossEntropyLoss()
     else:
-        loss = nn.MSELoss()
+        lossFunc = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr = learning_rate)
     
     loss_rec = 100
@@ -87,16 +87,21 @@ def main():
         for imgs, labels in loader:
             imgs = imgs.type(torch.FloatTensor).to(device)
             labels = labels.type(torch.FloatTensor).to(device)
-            predicted = model(imgs).to(device)
+            predicted = model(imgs)
+            
+            if(type(predicted) == torch.Tensor):
+                predicted = predicted.to(device)
+            else:
+                predicted = torch.cat(predicted, 0)
             avd_n += 1
             
             if("segment" in CONFIG['output_type']):
                 labels = labels.type(torch.LongTensor).to(device)
                 
-                loss = loss(predicted, labels)
+                loss = lossFunc(predicted, labels)
                 acc_loss += loss.item()
             else:
-                loss = loss(predicted, labels)
+                loss = lossFunc(predicted, labels)
                 acc_loss += loss.item()
             
             loader.set_description(f'Loss: {(acc_loss / avd_n):.4e}')
