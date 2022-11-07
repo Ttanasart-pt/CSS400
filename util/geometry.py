@@ -1,7 +1,4 @@
 import math
-from multiprocessing.resource_sharer import DupSocket
-from turtle import distance
-from xml.etree.ElementTree import fromstring
 
 class Point():
     @staticmethod
@@ -33,10 +30,16 @@ class Point():
     def magnitude(self):
         return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
     def __add__(self, o):
-        return Point(fromTuple = (self.x + o.x, self.y + o.x, self.z + o.z))
+        return Point(fromTuple = (self.x + o.x, self.y + o.y, self.z + o.z))
     def __sub__(self, o):
-        return Point(fromTuple = (self.x - o.x, self.y - o.x, self.z - o.z))
+        return Point(fromTuple = (self.x - o.x, self.y - o.y, self.z - o.z))
     def __mul__(self, o):
         return Point(fromTuple = (self.x * o, self.y * o, self.z * o))
     def __truediv__(self, o):
         return Point(fromTuple = (self.x / o, self.y / o, self.z / o))
+    
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y}, {self.z})"
+    
+def distancePointToLine(l0, l1, p):
+    return abs((l1.x - l0.x) * (l0.x - p.y) - (l0.x - p.x) * (l1.y - l0.y)) / math.sqrt((l0.x - l0.y) ** 2 + (l1.x - l1.y) ** 2)

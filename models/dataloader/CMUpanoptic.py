@@ -22,14 +22,6 @@ class CMUDataset(Dataset):
         
         self.list_files = [f[:-4] for f in os.listdir(self.root) if f.endswith(".jpg")]
         
-        self.pretransform = A.Compose(
-            [
-                A.HorizontalFlip(p = 0.5),
-                A.ShiftScaleRotate(p = 0.5),
-            ],
-            keypoint_params = A.KeypointParams("xy")
-        )
-        
         self.transform = A.Compose(
             [
                 A.Resize(size, size),
@@ -46,25 +38,22 @@ class CMUDataset(Dataset):
     def __getitem__(self, index):
         img_name = self.list_files[index]
         img_path = os.path.join(self.root, img_name + ".jpg")
-        image = np.array(Image.open(img_path))
+        img = np.array(Image.open(img_path))
         
         label_path = os.path.join(self.root, img_name + ".json")
         with open(label_path, 'r') as f:
             label_json = json.load(f)
         
         hand_label = [lm[:2] for lm in label_json['hand_pts']]
-        hl = []
+        kp = []
         for h in hand_label:
             x = h[0]
             y = h[1]
-            if x > 0 and x < image.shape[1] and y > 0 and y < image.shape[0]:
-                hl.append((x, y))
+            if x > 0 and x < img.shape[1] and y > 0 and y < img.shape[0]:
+                kp.append((x, y))
             else:
-                hl.append((0, 0))
-        transformed = self.pretransform(image = image, keypoints = hl)
+                kp.append((0, 0))
         
-        img = transformed['image'] 
-        kp = transformed['keypoints']
         x_min = img.shape[1]
         y_min = img.shape[0]
         x_max = 0
@@ -97,7 +86,8 @@ class CMUDataset(Dataset):
                 _kp.append((0, 0))
         
         transformed = self.transform(image = img, keypoints = _kp)
-        return transformed['image'], transformed['keypoints']
+        kp = torch.tensor(transformed['keypoints']).reshape((42))
+        return transformed['image'], kp
 
 class CMUHeatmapDataset(CMUDataset):
     def gaussian(self, pos, sigma = 8):

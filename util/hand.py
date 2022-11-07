@@ -13,11 +13,13 @@ class Hand():
     def __init__(self) -> None:
         self.gesture = 0
         self.pose = None
-        self.handSense = 0.2
+        self.pinchDistance = .05
         
     def poseAnalyze(self, handPose):
         self.pose = handPose.landmark
         wrist = Point(self.pose[mp_hands.HandLandmark.WRIST])
+        thumb_tip = Point(self.pose[mp_hands.HandLandmark.THUMB_TIP])
+        
         index_mcp = Point(self.pose[mp_hands.HandLandmark.INDEX_FINGER_MCP])
         index_dip = Point(self.pose[mp_hands.HandLandmark.INDEX_FINGER_DIP])
         index_tip = Point(self.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP])
@@ -29,8 +31,8 @@ class Hand():
         pinky_tip = Point(self.pose[mp_hands.HandLandmark.PINKY_TIP])
         
         index_pnt = Point.distance(index_mcp, index_tip) + Point.distance(index_mcp, index_dip)
+        isPinch = Point.distance(thumb_tip, index_tip) < self.pinchDistance
         
         self.gesture = 0
-        isIndexPoint = index_pnt > self.handSense
-        if isIndexPoint:
+        if isPinch:
             self.gesture = 1

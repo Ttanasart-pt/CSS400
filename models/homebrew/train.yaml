@@ -10,3 +10,5 @@ load_model: False
 
 model: "homebrew"
 output_type: "keypoints"
+
+report: "homebrew/reports"
