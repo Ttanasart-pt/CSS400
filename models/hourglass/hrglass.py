@@ -12,6 +12,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torchsummary import summary
+
 class Residual(nn.Module):
     def __init__(self, use_bn, input_channels, out_channels, mid_channels):
         super(Residual, self).__init__()
@@ -198,7 +200,7 @@ class HourGlass(nn.Module):
         for _ in range(self.nStack):
             o1 = self.hg[_](x)
             o2 = self.intermediate_supervision[_](o1)
-            o.append(o2.view(-1, 4096))
+            o.append(o2.reshape((64, 64)))
             if _ == self.nStack - 1:
                 break
             o2 = self.normal_feature_channel[_](o2)
@@ -216,3 +218,9 @@ def create_hourglass_net():
         nJointCount = 21,
         bUseBn = True,
     )
+    
+if __name__ == "__main__":
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = create_hourglass_net().to(device)
+    
+    summary(model, (3, 256, 256))

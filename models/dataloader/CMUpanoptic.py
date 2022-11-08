@@ -90,7 +90,7 @@ class CMUDataset(Dataset):
         return transformed['image'], kp
 
 class CMUHeatmapDataset(CMUDataset):
-    def gaussian(self, pos, sigma = 8):
+    def gaussian(self, pos, sigma = 32):
         x, y = pos
         if(pos == (0, 0)):
             hm = np.zeros((self.size, self.size))
@@ -102,9 +102,10 @@ class CMUHeatmapDataset(CMUDataset):
 
     def __getitem__(self, index):
         image, hand_label = super().__getitem__(index)
-        for _ in range(21 - len(hand_label)):
-            hand_label.append((0, 0))
-        hms = np.array([self.gaussian(lm) for lm in hand_label])
+        hl = []
+        for i in range(0, len(hand_label), 2):
+            hl.append((hand_label[i], hand_label[i + 1]))
+        hms = np.array([self.gaussian(lm) for lm in hl])
         hms = torch.tensor(hms)
         return image, hms
 

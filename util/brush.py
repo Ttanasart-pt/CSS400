@@ -1,5 +1,5 @@
-from util.geometry import Point, distancePointToLine
-import util.renderObject as renderObject
+from util.geometry import Point, distancePointToLine, direction, distance
+import util.renderObject as renderObject 
 
 class StrokeCapture():
     def __init__(self, renderer) -> None:
@@ -21,17 +21,91 @@ class StrokeCapture():
         self.isDrawing = True
     
     def fitCircle(self):
-        return False
+        if(len(self.anchors) < 1):
+            return False
+         
+        mean = Point()
+        for p in self.anchors:
+            mean += p
+        mean /= len(self.anchors)
+        
+        dirr = 0
+        op = None
+        minx = None
+        miny = None
+        maxx = None
+        maxy = None
+        
+        for p in self.anchors:
+            if op is None:
+                op = p
+                minx = p.x
+                miny = p.y
+                maxx = p.x
+                maxy = p.y
+                continue
+            dirr += direction(op, p)
+        
+        if(abs(180 - abs(dirr) % 360) > 30):
+            return False
+        
+        rad = ((maxx - minx) + (maxy - miny)) / 2
+        for p in self.anchors:
+            dist = distance(p, mean)
+            if (abs(dist / rad - 1) > 0.4):
+                return False
+        return mean, rad
+    
+    def fitRectangle(self):
+        smoothAnchor = self.smoothPathDouglas(32)
+        if(len(smoothAnchor) != 4):
+            return False
+        
+        dirr = 0
+        op = None
+        minx = None
+        miny = None
+        maxx = None
+        maxy = None
+        
+        for p in self.anchors:
+            if op is None:
+                op = p
+                minx = p.x
+                miny = p.y
+                maxx = p.x
+                maxy = p.y
+                continue
+            dirr += direction(op, p)
+            
+        if(abs(180 - abs(dirr) % 360) > 30):
+            return False
+        
+        return (minx, miny, maxx, maxy)
+        
     
     def drawPath(self):
+        smoothAnchor = None
         if self.smoothAlgo == 'Distance accumulate':
-            self.drawPathDistAcc()
-        elif self.smoothAlgo == 'Moving average':
-            self.drawPathMoveAvg()
+            smoothAnchor = self.smoothPathDistAcc(self.anchorMinDistance)
+        elif self.smoothAlgo == 'Moving averae':
+            smoothAnchor = self.smoothPathMoveAvg(self.nAverage)
         elif self.smoothAlgo == 'Douglas-Peucker':
-            self.drawPathDouglas()
+            smoothAnchor = self.smoothPathDouglas(self.douglasThres)
+            
+        if smoothAnchor:
+            self.renderer.addObject(self.applyStyle(renderObject.pathObject(smoothAnchor)))
     
-    def drawPathDistAcc(self):
+    def drawCircle(self, meanRad):
+        self.renderer.addObject(self.applyStyle(renderObject.circleObject(meanRad)))
+    
+    def drawRectangle(self, corners):
+        self.renderer.addObject(self.applyStyle(renderObject.rectObject(corners)))
+        
+    def applyStyle(self, renderObj):
+        return renderObj.setStyle(thickness = self.thickness, color = self.color)
+    
+    def smoothPathDistAcc(self, minDist):
         anchors = []
         op = None
         for p in self.anchors:
@@ -39,20 +113,20 @@ class StrokeCapture():
                 op = p
                 anchors.append(p)
                 continue
-            if(Point.distance(op, p) < self.anchorMinDistance):
+            if(Point.distance(op, p) < minDist):
                 continue
             
             anchors.append(p)
             op = p
-        self.renderer.addObject(renderObject.pathObject(anchors))
+        return anchors
     
-    def drawPathMoveAvg(self):
+    def smoothPathMoveAvg(self, n):
         anchors = []
         pool = []
         
         for p in self.anchors:
             pool.append(p)
-            if(len(pool) > self.nAverage):
+            if(len(pool) > n):
                 pool.pop(0)
             
             _p = Point(fromTuple = (0, 0, 0))
@@ -64,9 +138,9 @@ class StrokeCapture():
             avg.y = round(avg.y)
             avg.z = round(avg.z)
             anchors.append(avg)
-        self.renderer.addObject(renderObject.pathObject(anchors))
+        return anchors
         
-    def drawPathDouglas(self):
+    def smoothPathDouglas(self, threshold):
         anchors = []
         op = None
         oi = 0
@@ -80,11 +154,11 @@ class StrokeCapture():
             for j in self.anchors[oi:i]:
                 maxDist = max(maxDist, distancePointToLine(op, p, j))
             
-            if(maxDist > self.douglasThres):
+            if(maxDist > threshold):
                 anchors.append(p)
                 op = p
                 oi = i
-        self.renderer.addObject(renderObject.pathObject(anchors))
+        return anchors
         
     def release(self):
         self.isDrawing = False
@@ -100,7 +174,11 @@ class StrokeCapture():
         if(dist < self.lineMinDistance):
             return
         
-        if(not self.fitCircle()):
+        if(s := self.fitCircle() is not None):
+            self.drawCircle(s)
+        elif(s := self.fitRectangle() is not None):
+            self.drawRectangle(s)
+        else:
             self.drawPath()
-            
+        
         self.anchors.clear()

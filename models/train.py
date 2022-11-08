@@ -89,10 +89,9 @@ def main():
             labels = labels.type(torch.FloatTensor).to(device)
             predicted = model(imgs)
             
-            if(type(predicted) == torch.Tensor):
-                predicted = predicted.to(device)
-            else:
+            if(type(predicted) == list):
                 predicted = torch.cat(predicted, 0)
+            predicted = predicted.to(device)
             avd_n += 1
             
             if("segment" in CONFIG['output_type']):
@@ -101,6 +100,8 @@ def main():
                 loss = lossFunc(predicted, labels)
                 acc_loss += loss.item()
             else:
+                print(labels.shape)
+                print(predicted.shape)
                 loss = lossFunc(predicted, labels)
                 acc_loss += loss.item()
             

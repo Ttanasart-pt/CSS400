@@ -4,7 +4,7 @@ input_size: 256
 epoch: 100
 
 dataset: "E:/Dataset/RHD_published_v2/training/"
-checkpoint: "handSegment/lightning_logs/version_0/checkpoints/epoch=1-step=10316.ckpt"
+checkpoint: "handSegment/lightning_logs/version_2/checkpoints/epoch=23-step=123792.ckpt"
 save_model: True
 load_model: True
 

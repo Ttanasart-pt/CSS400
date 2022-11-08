@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torchsummary import summary
 
 class PoseNet(nn.Module):
     """Implements the PoseNet architecture.
@@ -115,3 +116,9 @@ class PoseNet(nn.Module):
         x = F.interpolate(x, s[2], mode='bilinear', align_corners=False) # 18
 
         return x
+    
+if __name__ == "__main__":
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = PoseNet().to(device)
+    
+    summary(model, (3, 256, 256))

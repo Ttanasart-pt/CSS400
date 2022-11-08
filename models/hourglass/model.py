@@ -6,8 +6,6 @@ import torch.optim as optim
 
 from torchsummary import summary
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 class Hourglass(nn.Module):
     def downSample(self, in_channel, out_channel, stride = 1):
         return nn.Sequential(
@@ -88,6 +86,7 @@ class Model(nn.Module):
         return pHeat
     
 if __name__ == "__main__":
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = Model().to(device)
     
     summary(model, (3, 256, 256))

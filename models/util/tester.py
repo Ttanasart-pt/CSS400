@@ -1,6 +1,7 @@
 from PIL import Image
 import cv2
 import torch
+import numpy as np
 from torchvision.utils import save_image
 from util.landmarkDrawer import drawPointArray
 from util.transforms import preprocess
@@ -43,5 +44,8 @@ def runModel(model, img, size, device):
     img = Image.fromarray(img)
     img = preprocessor(img)
     
-    res = model(torch.unsqueeze(img.to(device), 0)).cpu().detach().numpy()
+    res = model(torch.unsqueeze(img.to(device), 0))
+    if(type(res) == list):
+        res = torch.cat(res, 0)
+    res = res.cpu().detach().numpy()
     return res

@@ -16,6 +16,8 @@ class Point():
         return Point.distance(l1, P)
     
     def __init__(self, fromLandmark = None, fromTuple = None) -> None:
+        self.x, self.y, self.z = 0, 0, 0
+        
         if fromLandmark:
             self.x = fromLandmark.x
             self.y = fromLandmark.y
@@ -43,3 +45,11 @@ class Point():
     
 def distancePointToLine(l0, l1, p):
     return abs((l1.x - l0.x) * (l0.x - p.y) - (l0.x - p.x) * (l1.y - l0.y)) / math.sqrt((l0.x - l0.y) ** 2 + (l1.x - l1.y) ** 2)
+
+def direction(p0, p1):
+    if (p1.x == p0.x):
+        return 90 if p1.y < p0.y else -90
+    return math.degrees(math.atan((p1.y - p0.y) / (p1.x - p0.x)))
+
+def distance(p0, p1):
+    return (p1 - p0).magnitude()
