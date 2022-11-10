@@ -5,7 +5,8 @@ import mediapipe as mp
 import pyvirtualcam       
 import tkinter as tk
 from tkinter import ttk
-
+import keyboard
+import copy
 from PIL import Image, ImageTk 
 import cv2
 import threading
@@ -51,6 +52,8 @@ class camApp(ttk.Frame):
         self.lastFrameTime = time.time_ns()
         self.frameTime = 0
         self.analyzeTime = 0
+
+
     
     def initSetting(self):
         self.settingFrame.grid(row = 0, column = 1, padx = 10, pady = 10, sticky="nsew")
@@ -84,7 +87,9 @@ class camApp(ttk.Frame):
         self.laserThickness = 5
         self.laserColor = (255., 0., 0.)
         self.drawLastPos = None
-        
+        self.history = []
+  
+
         self.canvasSurface = None
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
         
@@ -100,9 +105,12 @@ class camApp(ttk.Frame):
             self.laserPointerSurface = np.zeros_like(result)
         if self.canvasSurface is None:
             self.canvasSurface = np.zeros_like(result)
-        
+        if len(self.history) == 0:
+            self.history.append(np.zeros_like(result))
+        if len(self.history) == 1:
+            self.history[0]=np.zeros_like(self.canvasSurface)
         self.strokeDrawer.setSurface(self.canvasSurface)
-    
+
     def frameAnalyze(self, img):
         results = self.detector.process(img)
         self.surfaceCheck(img)
@@ -128,6 +136,7 @@ class camApp(ttk.Frame):
                 else:
                     self.drawLastPos = None
                     self.strokeDrawer.release()
+                    self.Savehistory()
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
         
@@ -144,7 +153,7 @@ class camApp(ttk.Frame):
         y += 32
         cv2.putText(img, f"analyze time: {self.analyzeTime / 1_000_000:.2f} ms", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
         y += 32
-    
+
     def videoLoop(self):
         with pyvirtualcam.Camera(width = 1280, height = 720, fps = 30) as camOut:
             while True:
@@ -165,7 +174,7 @@ class camApp(ttk.Frame):
                 
                 #camOut.send(img)
                 #camOut.sleep_until_next_frame()
-                
+            
                 image = Image.fromarray(img)
                 image = ImageTk.PhotoImage(image)
                 
@@ -179,7 +188,26 @@ class camApp(ttk.Frame):
                 
                 now = time.time_ns()
                 self.frameTime = now - startTime
+
+                if keyboard.is_pressed('delete'):
+                    self.canvasSurface = np.zeros_like(img)
+                    self.history.append(np.copy(self.canvasSurface))
+                
+                if keyboard.is_pressed('up'):
+                    self.undo()     
     
+    def Savehistory(self):
+        for i in range(0,len(self.history)):
+            if np.array_equal(self.history[i], self.canvasSurface):
+                return
+        self.history.append(copy.deepcopy(self.canvasSurface))
+
+    def undo(self):
+        if len(self.history) == 1:
+            return
+        self.history.pop()
+        self.canvasSurface = np.copy(self.history[len(self.history)-1])
+
     def onClose(self):
         print("Closing...")  
         self.stopEvent.set()
@@ -196,5 +224,3 @@ if __name__ == "__main__":
     app = camApp(root)
     app.pack(fill="both", expand=True)
     app.start()
-        
-   
