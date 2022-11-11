@@ -15,6 +15,41 @@ def detectLines(frame):
     resize = cv.resize(frame, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_CUBIC)
     
     dst = cv.cvtColor(resize, cv.COLOR_BGR2GRAY)
+    lines = cv.HoughLines(dst, 1, np.pi/180, 20, None, 0, 0)
+
+    #Normal Hough Lines
+    if lines is not None:
+        #Create an array contains LineString objects for each line
+        linesArr = []
+        rho = lines[0][0][0]
+        theta = lines[0][0][1]
+        a = math.cos(theta)
+        b = math.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int((x0 + 1000*(-b)))*width_ratio
+        y1 = int((y0 + 1000*(a)))*height_ratio
+        x2 = int((x0 - 1000*(-b)))*width_ratio
+        y2 = int((y0 - 1000*(a)))*height_ratio
+
+        if abs(x1-x2) < 5 and abs(y1-y2) > 5:
+            x2 = x1
+        if abs(y1-y2) < 5 and abs(x1-x2) > 5:
+            y2 = y1
+
+        pt1 = (x1, y1)
+        pt2 = (x2, y2)
+        linesArr.append(LineString([pt1, pt2]))
+
+        cv.line(result, (int(linesArr[0].coords[0][0]), int(linesArr[0].coords[0][1])), (int(linesArr[0].coords[1][0]), int(linesArr[0].coords[1][1])), (255,0,0), 3, cv.LINE_AA)
+        
+        return result
+
+def detectShape(frame):
+    result = np.zeros_like(frame)
+    resize = cv.resize(frame, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_CUBIC)
+    
+    dst = cv.cvtColor(resize, cv.COLOR_BGR2GRAY)
     linesP = cv.HoughLinesP(dst, 1, np.pi/180, 20, None, 20, 5)
 
     blur = cv.GaussianBlur(dst, (5, 5), 0)
@@ -26,6 +61,7 @@ def detectLines(frame):
         
         #Create an array contains LineString objects for each line
         linesArr = []
+
         for i in range(0, len(linesP)):
             l = linesP[i][0]
             x1 = l[0]*width_ratio
@@ -106,8 +142,7 @@ def detectLines(frame):
         elif len(linesArr) > 6 and len(linesArr) < 12:
             print("Polygon")
 
-        if len(linesArr) >= 3:
-            for i in range(0, len(linesArr)):   
+        for i in range(0, len(linesArr)):   
                 cv.line(result, (int(linesArr[i].coords[0][0]), int(linesArr[i].coords[0][1])), (int(linesArr[i].coords[1][0]), int(linesArr[i].coords[1][1])), (255,0,0), 3, cv.LINE_AA)
 
     if circles is not None and linesP is None:

@@ -88,6 +88,7 @@ class camApp(ttk.Frame):
         self.drawLastPos = None
         self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
         self.drawnShape = np.zeros((480, 640, 3), dtype = np.uint8)
+        self.lastGesture = 0
 
         self.canvasSurface = None
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
@@ -124,6 +125,41 @@ class camApp(ttk.Frame):
                 self.leftHand.poseAnalyze(hand_landmarks)
                 
                 if(self.leftHand.gesture == 1):
+                    self.lastGesture = 1
+                    index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                    fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
+                    if self.drawLastPos:
+                        cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
+                    self.drawLastPos = fingerPos
+                    self.strokeDrawer.record(fingerPos)
+                    if(fingerPos.x < 640 and fingerPos.y < 480):
+                        self.drawnPoints[fingerPos.y][fingerPos.x] = 255
+                        for i in range (0, 3):
+                            for j in range (0, 3):
+                                if(fingerPos.y+i < 480 and fingerPos.x+j < 640 and fingerPos.y-i > 0 and fingerPos.x-j > 0):
+                                    self.drawnPoints[fingerPos.y + i][fingerPos.x-j] = 255
+                                    self.drawnPoints[fingerPos.y + i][fingerPos.x+j] = 255
+                                    self.drawnPoints[fingerPos.y -i][fingerPos.x-j] = 255
+                                    self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
+                elif(self.leftHand.gesture == 2):
+                    self.lastGesture = 2
+                    index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                    fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
+                    if self.drawLastPos:
+                        cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
+                    self.drawLastPos = fingerPos
+                    self.strokeDrawer.record(fingerPos)
+                    if(fingerPos.x < 640 and fingerPos.y < 480):
+                        self.drawnPoints[fingerPos.y][fingerPos.x] = 255
+                        for i in range (0, 3):
+                            for j in range (0, 3):
+                                if(fingerPos.y+i < 480 and fingerPos.x+j < 640 and fingerPos.y-i > 0 and fingerPos.x-j > 0):
+                                    self.drawnPoints[fingerPos.y + i][fingerPos.x-j] = 255
+                                    self.drawnPoints[fingerPos.y + i][fingerPos.x+j] = 255
+                                    self.drawnPoints[fingerPos.y -i][fingerPos.x-j] = 255
+                                    self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
+                elif(self.leftHand.gesture == 3):
+                    self.lastGesture = 3
                     index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
                     fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
                     if self.drawLastPos:
@@ -141,14 +177,19 @@ class camApp(ttk.Frame):
                                     self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
                 else:
                     self.drawLastPos = None
-                    self.drawnShape = hough.detectLines(self.drawnPoints)
-                    if self.drawnShape.nonzero()[0].size != 0:
-                        self.strokeDrawer.release(False)
-                        self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
-                    else:
-                        self.strokeDrawer.release(True)
+                    if self.lastGesture == 2:
+                        self.drawnShape = hough.detectLines(self.drawnPoints)
+                    elif self.lastGesture == 3:
+                        self.drawnShape = hough.detectShape(self.drawnPoints)
+                    if self.drawnShape is not None:
+                        if self.drawnShape.nonzero()[0].size != 0:
+                            self.strokeDrawer.release(False)
+                            self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
+                        else:
+                            self.strokeDrawer.release(True)
                     self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
-        
+                    self.lastGesture = 0
+
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
         imgB = cv2.addWeighted(img, 1, self.laserPointerSurface, 1, 0.0)
         imgB = cv2.addWeighted(imgB, 1, self.canvasSurface, 1, 0.0)
