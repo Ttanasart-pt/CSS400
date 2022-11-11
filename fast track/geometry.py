@@ -1,5 +1,5 @@
 import math
-from multiprocessing.resource_sharer import DupSocket
+from multiprocessing.resource_sharer import socket
 from turtle import distance
 from xml.etree.ElementTree import fromstring
 
