@@ -16,7 +16,7 @@ from hand import Hand
 import cvpainter
 import brush
 
-import filled_shape as fs
+import hough
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
@@ -141,14 +141,16 @@ class camApp(ttk.Frame):
                                     self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
                 else:
                     self.drawLastPos = None
-                    self.strokeDrawer.release()
-                    self.drawnShape = fs.capture(self.drawnPoints, True)
+                    self.drawnShape = hough.detectLines(self.drawnPoints)
+                    if self.drawnShape.nonzero()[0].size != 0:
+                        self.strokeDrawer.release(False)
+                        self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
+                    else:
+                        self.strokeDrawer.release(True)
                     self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
         imgB = cv2.addWeighted(img, 1, self.laserPointerSurface, 1, 0.0)
-        if self.drawnShape.nonzero()[0].size != 0:
-            self.canvasSurface = self.drawnShape
         imgB = cv2.addWeighted(imgB, 1, self.canvasSurface, 1, 0.0)
         return imgB
     
@@ -196,8 +198,6 @@ class camApp(ttk.Frame):
                 
                 now = time.time_ns()
                 self.frameTime = now - startTime
-
-                
     
     def onClose(self):
         print("Closing...")  

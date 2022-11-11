@@ -34,7 +34,7 @@ class Stroke():
             cvpainter.draw_line(self.surface, op, p, self.thickness, self.color)
             op = p
     
-    def release(self):
+    def release(self, draw = True):
         if(len(self.anchors) == 0):
             return
         
@@ -47,7 +47,7 @@ class Stroke():
         if(dist < self.lineMinDistance):
             return
         
-        if(not self.fitCircle()):
+        if(draw):
             self.drawPath()
             
         self.anchors.clear()
