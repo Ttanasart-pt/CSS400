@@ -93,6 +93,7 @@ class camApp(ttk.Frame):
         self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
         self.drawnShape = np.zeros((480, 640, 3), dtype = np.uint8)
         self.lastGesture = 0
+        self.currentTool = "None"
         self.canvasSurface = None
         self.strokeDrawer = brush.Stroke(self.canvasSurface)
         
@@ -131,7 +132,6 @@ class camApp(ttk.Frame):
                 self.leftHand.poseAnalyze(hand_landmarks)
                 
                 if(self.leftHand.gesture == 1):
-                    self.lastGesture = 1
                     index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
                     fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
                     if self.drawLastPos:
@@ -149,38 +149,13 @@ class camApp(ttk.Frame):
                                     self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
                 elif(self.leftHand.gesture == 2):
                     self.lastGesture = 2
-                    index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                    fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
-                    if self.drawLastPos:
-                        cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
-                    self.drawLastPos = fingerPos
-                    self.strokeDrawer.record(fingerPos)
-                    if(fingerPos.x < 640 and fingerPos.y < 480):
-                        self.drawnPoints[fingerPos.y][fingerPos.x] = 255
-                        for i in range (0, 3):
-                            for j in range (0, 3):
-                                if(fingerPos.y+i < 480 and fingerPos.x+j < 640 and fingerPos.y-i > 0 and fingerPos.x-j > 0):
-                                    self.drawnPoints[fingerPos.y + i][fingerPos.x-j] = 255
-                                    self.drawnPoints[fingerPos.y + i][fingerPos.x+j] = 255
-                                    self.drawnPoints[fingerPos.y -i][fingerPos.x-j] = 255
-                                    self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
+                    self.currentTool = "Line"
                 elif(self.leftHand.gesture == 3):
                     self.lastGesture = 3
-                    index_finger = self.leftHand.pose[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                    fingerPos = Point(fromTuple = (round(index_finger.x * (img.shape[1])), round(index_finger.y * (img.shape[0])), 0))
-                    if self.drawLastPos:
-                        cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
-                    self.drawLastPos = fingerPos
-                    self.strokeDrawer.record(fingerPos)
-                    if(fingerPos.x < 640 and fingerPos.y < 480):
-                        self.drawnPoints[fingerPos.y][fingerPos.x] = 255
-                        for i in range (0, 3):
-                            for j in range (0, 3):
-                                if(fingerPos.y+i < 480 and fingerPos.x+j < 640 and fingerPos.y-i > 0 and fingerPos.x-j > 0):
-                                    self.drawnPoints[fingerPos.y + i][fingerPos.x-j] = 255
-                                    self.drawnPoints[fingerPos.y + i][fingerPos.x+j] = 255
-                                    self.drawnPoints[fingerPos.y -i][fingerPos.x-j] = 255
-                                    self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
+                    self.currentTool = "Shape"
+                elif(self.leftHand.gesture == 4):
+                    self.lastGesture = 4
+                    self.currentTool = "Free"
                 else:
                     self.drawLastPos = None
                     if self.lastGesture == 2:
@@ -210,6 +185,8 @@ class camApp(ttk.Frame):
         cv2.putText(img, f"frame time: {self.frameTime / 1_000_000:.2f} ms", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
         y += 32
         cv2.putText(img, f"analyze time: {self.analyzeTime / 1_000_000:.2f} ms", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        y += 32
+        cv2.putText(img, f"Current Tool: {self.currentTool}", (8, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
         y += 32
 
     def videoLoop(self):
@@ -250,21 +227,27 @@ class camApp(ttk.Frame):
                 if keyboard.is_pressed('delete'):
                     self.canvasSurface = np.zeros_like(img)
                     self.history.append(np.copy(self.canvasSurface))
+                    self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
+                    self.drawnShape = np.zeros((480, 640, 3), dtype = np.uint8)
                 
                 if keyboard.is_pressed('up'):
-                    self.undo()     
+                    self.undo()
+                    self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)  
+                    self.drawnShape = np.zeros((480, 640, 3), dtype = np.uint8)   
     
     def Savehistory(self):
         for i in range(0,len(self.history)):
             if np.array_equal(self.history[i], self.canvasSurface):
                 return
         self.history.append(copy.deepcopy(self.canvasSurface))
+        return 
 
     def undo(self):
         if len(self.history) == 1:
             return
         self.history.pop()
         self.canvasSurface = np.copy(self.history[len(self.history)-1])
+        return
 
     def onClose(self):
         print("Closing...")  
