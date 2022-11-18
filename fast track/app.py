@@ -162,12 +162,11 @@ class camApp(ttk.Frame):
                         self.drawnShape = hough.detectLines(self.drawnPoints)
                     elif self.lastGesture == 3:
                         self.drawnShape = hough.detectShape(self.drawnPoints)
-                    if self.drawnShape is not None:
-                        if self.drawnShape.nonzero()[0].size != 0:
-                            self.strokeDrawer.release(False)
-                            self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
-                        else:
-                            self.strokeDrawer.release(True)
+                    if not np.all(self.drawnShape==0):
+                        self.strokeDrawer.release(False)
+                        self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
+                    else:
+                        self.strokeDrawer.release(True)
                     self.drawnPoints = np.zeros((480, 640, 3), dtype = np.uint8)
                     self.lastGesture = 0
                     self.Savehistory()
