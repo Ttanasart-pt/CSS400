@@ -3,20 +3,22 @@ import numpy as np
 import math
 from shapely.geometry import LineString, Point
 
-CANVAS_WIDTH = 640
-CANVAS_HEIGHT = 480
-RESIZE_WIDTH = 160
-RESIZE_HEIGHT = 160
-width_ratio = int(CANVAS_WIDTH / RESIZE_WIDTH)
-height_ratio = int(CANVAS_HEIGHT / RESIZE_HEIGHT)
-def deep_index(lst, w):
+
+def deep_index(lst, w, width_ratio, height_ratio):
     return [(sub.index(w)*width_ratio, i*height_ratio) for (i, sub) in enumerate(lst) if w in sub]
 def detectLines(frame):
+    CANVAS_WIDTH = frame.shape[1]
+    CANVAS_HEIGHT = frame.shape[0]
+    RESIZE_WIDTH = 160
+    RESIZE_HEIGHT = 160
+    width_ratio = int(CANVAS_WIDTH / RESIZE_WIDTH)
+    height_ratio = int(CANVAS_HEIGHT / RESIZE_HEIGHT)
+
     result = np.zeros_like(frame)
     resize = cv.resize(frame, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_CUBIC)
     dst = cv.cvtColor(resize, cv.COLOR_BGR2GRAY)
 
-    lineList = deep_index(dst.tolist(), 255)
+    lineList = deep_index(dst.tolist(), 255, width_ratio, height_ratio)
     if len(lineList) == 0:
         return result
     first_index = lineList[0]
@@ -30,6 +32,13 @@ def detectLines(frame):
     return result
 
 def detectShape(frame):
+    CANVAS_WIDTH = frame.shape[1]
+    CANVAS_HEIGHT = frame.shape[0]
+    RESIZE_WIDTH = 160
+    RESIZE_HEIGHT = 160
+    width_ratio = int(CANVAS_WIDTH / RESIZE_WIDTH)
+    height_ratio = int(CANVAS_HEIGHT / RESIZE_HEIGHT)
+
     result = np.zeros_like(frame)
     resize = cv.resize(frame, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_CUBIC)
     
