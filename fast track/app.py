@@ -107,7 +107,6 @@ class camApp(ttk.Frame):
     def surfaceCheck(self, result):
         if self.laserPointerSurface is None:
             self.laserPointerSurface = np.zeros_like(result)
-            print(self.laserPointerSurface.shape)
         if self.canvasSurface is None:
             self.canvasSurface = np.zeros_like(result)
         if self.drawnPoints is None:
@@ -169,11 +168,12 @@ class camApp(ttk.Frame):
                         self.drawnShape = hough.detectShape(self.drawnPoints)
                     if not np.all(self.drawnShape==0):
                         self.strokeDrawer.release(False)
+                        print(self.canvasSurface.shape, self.drawnShape.shape)
                         self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
                     else:
                         self.strokeDrawer.release(True)
-                    self.drawnPoints = None
-                    self.drawnShape = None
+                    self.drawnPoints = np.zeros_like(self.canvasSurface)
+                    self.drawnShape = np.zeros_like(self.canvasSurface)
                     self.lastGesture = 0
                     self.Savehistory()
         
@@ -232,13 +232,13 @@ class camApp(ttk.Frame):
                 if keyboard.is_pressed('delete'):
                     self.canvasSurface = np.zeros_like(img)
                     self.history.append(np.copy(self.canvasSurface))
-                    self.drawnPoints = None
-                    self.drawnShape = None
+                    self.drawnPoints = np.zeros_like(self.canvasSurface)
+                    self.drawnShape = np.zeros_like(self.canvasSurface)
                 
                 if keyboard.is_pressed('up'):
                     self.undo()
-                    self.drawnPoints = None
-                    self.drawnShape = None
+                    self.drawnPoints = np.zeros_like(self.canvasSurface)
+                    self.drawnShape = np.zeros_like(self.canvasSurface)
     
     def Savehistory(self):
         for i in range(0,len(self.history)):
