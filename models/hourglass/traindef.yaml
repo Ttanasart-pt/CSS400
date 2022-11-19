@@ -3,12 +3,12 @@ batch_size: 4
 input_size: 256
 epoch: 10
 
-dataset: "E:/Dataset/CMU/hand_syn/synth1"
-checkpoint: "hourglass/checkpoints/testdef.chk"
+dataset: "E:/Dataset/CMU/hand_manual/manual_train"
+checkpoint: "hourglass/checkpoints/testdef_6hm.chk"
 save_model: True
-load_model: False
+load_model: True
 
 model: "hourglass_def"
 output_type: "heatmap"
 
-report: "hourglass/reports/hrdef/"
+report: "hourglass/reports/hrdef6hm/"

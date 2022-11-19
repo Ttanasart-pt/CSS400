@@ -197,10 +197,13 @@ class HourGlass(nn.Module):
     def forward(self, inputs):
         o = [] #outputs include intermediate supervision result
         x = self.pre_process(inputs)
+        
+        size = inputs.shape
+        
         for _ in range(self.nStack):
             o1 = self.hg[_](x)
             o2 = self.intermediate_supervision[_](o1)
-            o.append(o2.reshape((64, 64)))
+            o.append(o2.view(size[0], -1, 64, 64))
             if _ == self.nStack - 1:
                 break
             o2 = self.normal_feature_channel[_](o2)
@@ -210,7 +213,7 @@ class HourGlass(nn.Module):
 
 def create_hourglass_net():
     return HourGlass(
-        nStack = 2,
+        nStack = 1,
         nBlockCount = 4,
         nResidualEachBlock = 1,
         nMidChannels = 128,

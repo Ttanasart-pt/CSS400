@@ -35,6 +35,9 @@ class circleObject(renderObject):
     def __init__(self, meanrad) -> None:
         super().__init__()
         self.center, self.radius = meanrad
+        self.center.x = round(self.center.x)
+        self.center.y = round(self.center.y)
+        self.radius = round(self.radius)
         
     def render(self, surface):
         cv2.circle(surface, (self.center.x, self.center.y), self.radius, self.color, self.thickness)
@@ -44,6 +47,10 @@ class rectObject(renderObject):
     def __init__(self, corners) -> None:
         super().__init__()
         self.corners = corners
+        self.corners[0] = round(self.corners[0])
+        self.corners[1] = round(self.corners[1])
+        self.corners[2] = round(self.corners[2])
+        self.corners[3] = round(self.corners[3])
         
     def render(self, surface):
         cv2.rectangle(surface, self.corner[:2], self.corners[2:], self.color, self.thickness)

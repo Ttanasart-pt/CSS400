@@ -100,8 +100,8 @@ def main():
                 loss = lossFunc(predicted, labels)
                 acc_loss += loss.item()
             else:
-                print(labels.shape)
-                print(predicted.shape)
+                # print(f"{imgs.shape = }")
+                # print(f"{predicted.shape = }")
                 loss = lossFunc(predicted, labels)
                 acc_loss += loss.item()
             
@@ -109,6 +109,8 @@ def main():
             
             if(avd_n % loss_rec == 0 and acc_loss > 0):
                 losses.append(math.log10(acc_loss / avd_n))
+                plt.plot(losses)
+                plt.savefig(report_path + "losses.png")
             
             optimizer.zero_grad()
             loss.backward()

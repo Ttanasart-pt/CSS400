@@ -5,13 +5,14 @@ class StrokeCapture():
     def __init__(self, renderer) -> None:
         self.anchors = []
         self.renderer = renderer
-        self.thickness = 5
-        self.color = (0, 255, 255)
+        self.thickness = 4
+        self.color = (0, 0, 255)
         
         self.anchorMinDistance = 8
         self.lineMinDistance = 32
         self.nAverage = 3
         self.douglasThres = 4
+        self.shapeThres = 64
         
         self.isDrawing = False
         self.smoothAlgo = 'Distance accumulate'
@@ -20,7 +21,7 @@ class StrokeCapture():
         self.anchors.append(point)
         self.isDrawing = True
     
-    def fitCircle(self):
+    def fitCircle(self, thres):
         if(len(self.anchors) < 1):
             return False
          
@@ -31,35 +32,35 @@ class StrokeCapture():
         
         dirr = 0
         op = None
-        minx = None
-        miny = None
-        maxx = None
-        maxy = None
+        minx =  999999
+        miny =  999999
+        maxx = -999999
+        maxy = -999999
         
         for p in self.anchors:
             if op is None:
                 op = p
-                minx = p.x
-                miny = p.y
-                maxx = p.x
-                maxy = p.y
                 continue
+            minx = min(minx, p.x)
+            miny = min(miny, p.y)
+            maxx = max(maxx, p.x)
+            maxy = max(maxy, p.y)
             dirr += direction(op, p)
         
-        if(abs(180 - abs(dirr) % 360) > 30):
-            return False
+        if(abs(180 - abs(dirr) % 360) > thres):
+            return None
         
-        rad = ((maxx - minx) + (maxy - miny)) / 2
+        rad = ((maxx - minx) + (maxy - miny)) / 2 / 2
         for p in self.anchors:
             dist = distance(p, mean)
-            if (abs(dist / rad - 1) > 0.4):
-                return False
+            #if (abs(dist / rad - 1) > 0.4):
+            #    return None
         return mean, rad
     
-    def fitRectangle(self):
-        smoothAnchor = self.smoothPathDouglas(32)
+    def fitRectangle(self, thres):
+        smoothAnchor = self.smoothPathDouglas(thres)
         if(len(smoothAnchor) != 4):
-            return False
+            return None
         
         dirr = 0
         op = None
@@ -79,10 +80,21 @@ class StrokeCapture():
             dirr += direction(op, p)
             
         if(abs(180 - abs(dirr) % 360) > 30):
-            return False
-        
+            return None
         return (minx, miny, maxx, maxy)
+    
+    def fitShape(self):
+        shape = self.fitCircle(self.shapeThres)
+        if(shape is not None):
+            self.drawCircle(shape)
+            return True
         
+        shape = self.fitRectangle(self.shapeThres)
+        if(shape is not None):
+            self.drawRectangle(shape)
+            return True
+        
+        return False
     
     def drawPath(self):
         smoothAnchor = None
@@ -174,11 +186,7 @@ class StrokeCapture():
         if(dist < self.lineMinDistance):
             return
         
-        if(s := self.fitCircle() is not None):
-            self.drawCircle(s)
-        elif(s := self.fitRectangle() is not None):
-            self.drawRectangle(s)
-        else:
+        if not self.fitShape():
             self.drawPath()
         
         self.anchors.clear()

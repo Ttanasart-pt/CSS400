@@ -1,4 +1,3 @@
-from tracemalloc import start
 import numpy as np
 import cv2
 import mediapipe as mp
@@ -216,15 +215,15 @@ class camApp(ttk.Frame):
                     self.drawLastPos = None
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)
-        self.renderer.render(self.canvasSurface)
+        self.canvasSurface = self.renderer.render(self.canvasSurface)
         
         cont = cv2.cvtColor(self.canvasSurface, cv2.COLOR_RGB2GRAY)
-        cont = cv2.threshold(self.canvasSurface, 1, 255, cv2.THRESH_BINARY)
-        cont = cv2.cvtColor(self.canvasSurface, cv2.COLOR_GRAY2RGB)
+        _, cont = cv2.threshold(cont, 1, 255, cv2.THRESH_BINARY)
+        cont = cv2.cvtColor(cont, cv2.COLOR_GRAY2RGB)
         cont = cont.astype(float) / 255
         canvasMasked = self.canvasSurface.astype(float) * cont
         imageMasked  = img.astype(float) * (1 - cont)
-        imageCanvas = (canvasMasked + imageMasked).astype(cv2.uint8)
+        imageCanvas = (canvasMasked + imageMasked).astype(np.uint8)
         
         #imgB = cv2.addWeighted(img, 1, self.canvasSurface, 1, 0.0)
         imgB = cv2.addWeighted(imageCanvas, 1, self.laserPointerSurface, 1, 0.0)

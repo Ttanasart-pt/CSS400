@@ -44,7 +44,7 @@ class RHDSegment(Dataset):
         imgT = transformed['image']
         mskT = transformed['mask']
         
-        #return imgT, mskT / 255
+        return imgT, mskT / 255
         return { 'image': imgT, 'mask': torch.unsqueeze(mskT / 255, 0) }
 
     def __len__(self):

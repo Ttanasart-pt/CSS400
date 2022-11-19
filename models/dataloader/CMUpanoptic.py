@@ -59,10 +59,10 @@ class CMUDataset(Dataset):
         x_max = 0
         y_max = 0
         
-        px0 = random.randrange(8, self.padding)
-        py0 = random.randrange(8, self.padding)
-        px1 = random.randrange(8, self.padding)
-        py1 = random.randrange(8, self.padding)
+        px0 = random.randrange(0, self.padding)
+        py0 = random.randrange(0, self.padding)
+        px1 = random.randrange(0, self.padding)
+        py1 = random.randrange(0, self.padding)
         
         for k in kp:
             x_min = min(x_min, k[0])
@@ -75,7 +75,8 @@ class CMUDataset(Dataset):
         y_max = round(min(img.shape[0], y_max + py1))
         x_min, x_max = min(x_min, x_max), max(x_min, x_max)
         y_min, y_max = min(y_min, y_max), max(y_min, y_max)
-        img = A.crop(img, x_min, y_min, x_max, y_max)
+        if x_max > x_min and y_max > y_min:
+            img = A.crop(img, x_min, y_min, x_max, y_max)
         _kp = []
         for k in kp:
             x = k[0] - x_min
@@ -90,14 +91,24 @@ class CMUDataset(Dataset):
         return transformed['image'], kp
 
 class CMUHeatmapDataset(CMUDataset):
-    def gaussian(self, pos, sigma = 32):
+    def __init__(self, root, size) -> None:
+        super().__init__(root, size)
+        self.padding = 16
+    
+    def gaussian(self, pos, sigma = 6, scale = 1):
+        scale = 1 / 4
         x, y = pos
+        
+        x *= scale
+        y *= scale
+        hmSize = round(self.size * scale)
+        
         if(pos == (0, 0)):
-            hm = np.zeros((self.size, self.size))
+            hm = np.zeros((hmSize, hmSize))
         else:
-            hm = [ np.exp(-((c - x) ** 2 + (r - y) ** 2) / (2 * sigma ** 2)) for r in range(self.size) for c in range(self.size) ]
+            hm = [ np.exp(-((c - x) ** 2 + (r - y) ** 2) / (2 * sigma ** 2)) for r in range(hmSize) for c in range(hmSize) ]
         hm = np.array(hm, dtype = np.float32)
-        hm = np.reshape(hm, newshape = (self.size, self.size))
+        hm = np.reshape(hm, newshape = (hmSize, hmSize))
         return hm
 
     def __getitem__(self, index):
@@ -176,13 +187,12 @@ class CMUHandSegment(CMUBBoxDataset):
             hand_max[0] = max(hand_max[0], x)
             hand_max[1] = max(hand_max[1], y)
         
-        padding = 8
         #dim = image.size()
         handSeg = np.zeros((image.shape[0], image.shape[1]))
-        x0 = round(max(0, hand_min[0] - padding))
-        y0 = round(max(0, hand_min[1] - padding))
-        x1 = round(min(image.shape[1], hand_max[0] + padding))
-        y1 = round(min(image.shape[0], hand_max[1] + padding))
+        x0 = round(max(0, hand_min[0] - self.padding))
+        y0 = round(max(0, hand_min[1] - self.padding))
+        x1 = round(min(image.shape[1], hand_max[0] + self.padding))
+        y1 = round(min(image.shape[0], hand_max[1] + self.padding))
         handSeg[y0:y1, x0:x1] = 1
         bbox = [[x0, y0, x1, y1, "hand"]]
         

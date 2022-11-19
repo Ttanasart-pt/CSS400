@@ -89,6 +89,7 @@ def main():
             segment = cv2.dilate(segment, erode)
             cnt, _ = cv2.findContours(segment, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
+            topRight = segment
             
             for c in cnt:
                 x, y, w, h = cv2.boundingRect(c)
@@ -99,7 +100,7 @@ def main():
             bbox = runModel(segment_model, frame, imageSize, device)
             p0 = (round(bbox[0][0] * size[1] / imageSize), round(bbox[0][1] * size[0] / imageSize))
             p1 = (round(p0[0] + bbox[1][0] * size[1] / imageSize), round(p0[1] + bbox[1][1] * size[0] / imageSize))
-            handBBox = [p0[0], p0[1], p1[0], p1[1]]
+            handBBox.append([p0[0], p0[1], p1[0], p1[1]])
             
         else : 
             segment = runModel(segment_model, frame, imageSize, device)
@@ -112,13 +113,13 @@ def main():
                 x_min = non_zero[1].min() - padding
                 y_max = non_zero[0].max() + padding
                 x_max = non_zero[1].max() + padding
-                handBBox = [x_min, y_min, x_max, y_max]
+                handBBox.append([x_min, y_min, x_max, y_max])
             except Exception:
                 pass
             
             segment = cv2.cvtColor(segment, cv2.COLOR_GRAY2BGR)
-            segment = (segment * 255).astype(np.uint8)
-        topRight = segment
+            segment = np.clip(segment * 255, 0, 255).astype(np.uint8)
+            topRight = segment
         
         handIso = np.zeros((size[0], size[1], 3)).astype(np.uint8)
         resSurface = np.zeros(size).astype(np.float32)
@@ -135,24 +136,25 @@ def main():
             
             if width > 0 and height > 0:
                 if KEYPOINTS['output_type'] == "heatmap" :
-                    hms = runModel(segment_model, frame, detectSize, device)[0]
+                    res = runModel(keypoint_model, frame, detectSize, device)
+                    hms = res[0]
                     for hm in hms:
                         _hm = cv2.resize(hm, (width, height), cv2.INTER_LINEAR)
                         am = np.argmax(_hm)
                         x = am % width + x_min
                         y = am // width + y_min
                         
-                        frame = cv2.circle(frame, (x, y), 4, (255, 0, 0))
+                        frame = cv2.circle(frame, (x, y), 3, (255, 0, 0), -1)
                         resSurface[y_min : y_max, x_min : x_max] += _hm
                     
                 elif KEYPOINTS['output_type'] == "keypoints" :
-                    lms = runModelKeypoint(segment_model, frame, detectSize, device)
+                    lms = runModelKeypoint(keypoint_model, frame, detectSize, device)
                     for lm in lms:
                         c = (round(lm[0] * width / detectSize), round(lm[1] * height / detectSize))
                         frame = cv2.circle(frame, c, 2, (255, 0, 0), -1)    
                     frame = np.concatenate((frame, segment), 1)
         
-        resSurface = (resSurface - resSurface.min()) / (resSurface.max() - resSurface.min())
+        #resSurface = (resSurface - resSurface.min()) / (resSurface.max() - resSurface.min())
         resSurface = cv2.cvtColor(resSurface, cv2.COLOR_GRAY2BGR)
         resSurface = (resSurface * 255).astype(np.uint8)
         
