@@ -72,7 +72,7 @@ class camApp(ttk.Frame):
         self.hsFrame.pack(fill = 'both', expand = True, padx = 20, pady = 20)
         
         ##============================##
-        hsLabel = ttk.Label(self.hsFrame, text = "Pinch distance", justify = 'left')
+        hsLabel = ttk.Label(self.hsFrame, text = "Hand sensitivity", justify = 'left')
         hsLabel.grid(row = 0, column = 0, sticky = 'W', padx = 20)
         
         self.handSenseValue = tk.DoubleVar(value = .05)
@@ -163,8 +163,8 @@ class camApp(ttk.Frame):
         self.strokeDrawer = brush.StrokeCapture(self.renderer)
         
     def onHandSettingChanged(self, _ = None):
-        self.rightHand.pinchDistance = self.handSenseValue.get()
-        self.leftHand.pinchDistance = self.handSenseValue.get()
+        self.rightHand.handSense = self.handSenseValue.get()
+        self.leftHand.handSense = self.handSenseValue.get()
     
     def onBrushSettingChanged(self, _ = None):
         self.laserThickness = self.pointerSizeValue.get()

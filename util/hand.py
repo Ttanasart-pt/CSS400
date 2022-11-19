@@ -13,7 +13,7 @@ class Hand():
     def __init__(self) -> None:
         self.gesture = 0
         self.pose = None
-        self.pinchDistance = .05
+        self.handSense = .05
         
     def poseAnalyze(self, handPose):
         self.pose = handPose.landmark
@@ -46,6 +46,9 @@ class Hand():
         isMiddlePoint = middle_pnt > self.handSense
         isRingPoint = ring_pnt > self.handSense
         isPinkyPoint = pinky_pnt > self.handSense
+        
+        #print(f"{isIndexPoint = }, {index_pnt:.3f}: {isMiddlePoint = }, {middle_pnt:.3f}: {isRingPoint = }, {ring_pnt:.3f}: {isPinkyPoint = }, {pinky_pnt:.3f}")
+        
         if isIndexPoint:
             self.gesture = 1
         if isIndexPoint and isMiddlePoint:

@@ -5,6 +5,8 @@ import mediapipe as mp
 import pyvirtualcam       
 import tkinter as tk
 from tkinter import ttk
+import sv_ttk
+
 import keyboard
 import copy
 from PIL import Image, ImageTk 
@@ -12,12 +14,12 @@ import cv2
 import threading
 import time
 
-from geometry import Point
-from hand import Hand
-import cvpainter
-import brush
+from util.geometry import Point
+from util.hand import Hand
+import util.cvpainter as cvpainter
+import util.brush as brush
 
-import hough
+import util.hough as hough
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
@@ -35,6 +37,7 @@ class camApp(ttk.Frame):
         self.columnconfigure(1, minsize = 200)
         self.camFrame = tk.Frame(self)
         self.camFrame.grid(row=0, column=0)
+        
         self.settingFrame = tk.Frame(self)
         self.settingFrame.grid(row=0, column=0)
         
@@ -54,26 +57,28 @@ class camApp(ttk.Frame):
         self.lastFrameTime = time.time_ns()
         self.frameTime = 0
         self.analyzeTime = 0
-
-
-    
-    def initSetting(self):
-        self.settingFrame.grid(row = 0, column = 1, padx = 10, pady = 10, sticky="nsew")
-        for i in range(5):
+        
+        self.onHandSettingChanged()
+        
+    def initSetting(self):        
+        self.settingFrame.grid(row = 0, column = 1, padx = (0, 10), pady = 10, sticky="nsew")
+        for i in range(2):
             self.settingFrame.rowconfigure(index = i, weight = 1)
         
-        self.hsFrame = tk.Frame(self.settingFrame)
-        self.hsFrame.columnconfigure(index = 0, minsize=200)
+        ##============================##
+        self.hsFrame = ttk.LabelFrame(self.settingFrame, text = "Hand settings")
+        self.hsFrame.columnconfigure(index = 0, minsize = 220)
         self.hsFrame.columnconfigure(index = 1, weight = 1)
-        self.hsFrame.pack(fill = 'both', expand = True)
+        self.hsFrame.pack(fill = 'both', expand = True, padx = 20, pady = 20)
         
-        hsLabel = tk.Label(self.hsFrame, text = "Hand sensitivity")
-        hsLabel.grid(row = 0, column = 0)
+        ##============================##
+        hsLabel = ttk.Label(self.hsFrame, text = "Hand sensitivity", justify = 'left')
+        hsLabel.grid(row = 0, column = 0, sticky = 'W', padx = 20)
         
-        self.handSenseValue = tk.DoubleVar(value = 0.2)
-        self.handSense = tk.Spinbox(self.hsFrame, from_ = 0, to = 1, increment = 0.01,\
-            textvariable = self.handSenseValue, command = self.onSensitivityChanged)
-        self.handSense.grid(row = 0, column = 1, padx = 0, pady=10, sticky = "ew")
+        self.handSenseValue = tk.DoubleVar(value = .05)
+        self.handSense = ttk.Spinbox(self.hsFrame, from_ = 0, to = 1, increment = 0.01,\
+            textvariable = self.handSenseValue, command = self.onHandSettingChanged)
+        self.handSense.grid(row = 0, column = 1, padx = 10, pady=10, sticky = "ew")
     
     def initCamera(self):
         self.camWidth = 800
@@ -95,9 +100,9 @@ class camApp(ttk.Frame):
         self.lastGesture = 0
         self.currentTool = "None"
         self.canvasSurface = None
-        self.strokeDrawer = brush.Stroke(self.canvasSurface)
+        self.strokeDrawer = brush.StrokeCapture(self.canvasSurface)
         
-    def onSensitivityChanged(self):
+    def onHandSettingChanged(self):
         self.rightHand.handSense = self.handSenseValue.get()
         self.leftHand.handSense = self.handSenseValue.get()
     
@@ -117,7 +122,6 @@ class camApp(ttk.Frame):
             self.history.append(np.zeros_like(result))
         if len(self.history) == 1:
             self.history[0]=np.zeros_like(self.canvasSurface)
-        self.strokeDrawer.setSurface(self.canvasSurface)
 
     def frameAnalyze(self, img):
         img = cv2.flip(img, 1)
@@ -141,7 +145,7 @@ class camApp(ttk.Frame):
                     if self.drawLastPos:
                         cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
                     self.drawLastPos = fingerPos
-                    self.strokeDrawer.record(fingerPos)
+                    #self.strokeDrawer.record(fingerPos)
                     if(fingerPos.x < self.drawnPoints.shape[1] and fingerPos.y < self.drawnPoints.shape[0]):
                         self.drawnPoints[fingerPos.y][fingerPos.x] = 255
                         for i in range (0, 3):
@@ -167,11 +171,11 @@ class camApp(ttk.Frame):
                     elif self.lastGesture == 3:
                         self.drawnShape = hough.detectShape(self.drawnPoints)
                     if not np.all(self.drawnShape==0):
-                        self.strokeDrawer.release(False)
+                        ##self.strokeDrawer.release(False)
                         print(self.canvasSurface.shape, self.drawnShape.shape)
                         self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
-                    else:
-                        self.strokeDrawer.release(True)
+                    # else:
+                    #     self.strokeDrawer.release(True)
                     self.drawnPoints = np.zeros_like(self.canvasSurface)
                     self.drawnShape = np.zeros_like(self.canvasSurface)
                     self.lastGesture = 0
@@ -265,8 +269,9 @@ if __name__ == "__main__":
     
     root = tk.Tk()
     root.title("Live Cam")
-    root.geometry("1200x500")
+    root.geometry("1320x500")
     
+    sv_ttk.set_theme("dark")
     app = camApp(root)
     app.pack(fill="both", expand=True)
     app.start()
