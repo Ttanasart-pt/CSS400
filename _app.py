@@ -15,7 +15,7 @@ import threading
 import time
 
 from util.geometry import Point
-from util.hand import Hand
+from util._hand import Hand
 import util.cvpainter as cvpainter
 import util.brush as brush
 
@@ -75,7 +75,7 @@ class camApp(ttk.Frame):
         hsLabel = ttk.Label(self.hsFrame, text = "Hand sensitivity", justify = 'left')
         hsLabel.grid(row = 0, column = 0, sticky = 'W', padx = 20)
         
-        self.handSenseValue = tk.DoubleVar(value = .05)
+        self.handSenseValue = tk.DoubleVar(value = .3)
         self.handSense = ttk.Spinbox(self.hsFrame, from_ = 0, to = 1, increment = 0.01,\
             textvariable = self.handSenseValue, command = self.onHandSettingChanged)
         self.handSense.grid(row = 0, column = 1, padx = 10, pady=10, sticky = "ew")
@@ -95,6 +95,7 @@ class camApp(ttk.Frame):
         self.laserColor = (255., 0., 0.)
         self.drawLastPos = None
         self.history = []
+        self.points = []
         self.drawnPoints = None
         self.drawnShape = None
         self.lastGesture = 0
@@ -128,6 +129,7 @@ class camApp(ttk.Frame):
         results = self.detector.process(img)
         self.surfaceCheck(img)
         
+        drawing = False
         if(results.multi_hand_landmarks):
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
@@ -145,6 +147,7 @@ class camApp(ttk.Frame):
                     if self.drawLastPos:
                         cvpainter.draw_line(self.laserPointerSurface, self.drawLastPos, fingerPos, self.laserThickness, self.laserColor)
                     self.drawLastPos = fingerPos
+                    self.points.append(fingerPos)
                     #self.strokeDrawer.record(fingerPos)
                     if(fingerPos.x < self.drawnPoints.shape[1] and fingerPos.y < self.drawnPoints.shape[0]):
                         self.drawnPoints[fingerPos.y][fingerPos.x] = 255
@@ -156,29 +159,27 @@ class camApp(ttk.Frame):
                                     self.drawnPoints[fingerPos.y -i][fingerPos.x-j] = 255
                                     self.drawnPoints[fingerPos.y -i][fingerPos.x+j] = 255
                 elif(self.leftHand.gesture == 2):
-                    self.lastGesture = 2
+                    self.lastGesture = self.leftHand.gesture
                     self.currentTool = "Line"
                 elif(self.leftHand.gesture == 3):
-                    self.lastGesture = 3
+                    self.lastGesture = self.leftHand.gesture
                     self.currentTool = "Shape"
                 elif(self.leftHand.gesture == 4):
-                    self.lastGesture = 4
+                    self.lastGesture = self.leftHand.gesture
                     self.currentTool = "Free"
                 else:
-                    self.drawLastPos = None
                     if self.lastGesture == 2:
                         self.drawnShape = hough.detectLines(self.drawnPoints)
-                    elif self.lastGesture == 3:
+                    elif self.lastGesture == 3 and not np.all(self.drawnPoints==0):
                         self.drawnShape = hough.detectShape(self.drawnPoints)
-                    if not np.all(self.drawnShape==0):
-                        ##self.strokeDrawer.release(False)
-                        print(self.canvasSurface.shape, self.drawnShape.shape)
+                    elif self.lastGesture == 4 and not np.all(self.drawnPoints==0):
+                        self.drawnShape = hough.drawLines(self.points, self.drawnShape)
+                        self.points = []
+                    if not np.all(self.drawnShape==0) or (self.lastGesture == 4 and not np.all(self.drawnPoints==0)):
                         self.canvasSurface = cv2.addWeighted(self.canvasSurface, 1, self.drawnShape, 1, 0.0)
-                    # else:
-                    #     self.strokeDrawer.release(True)
+                    self.drawLastPos = None
                     self.drawnPoints = np.zeros_like(self.canvasSurface)
                     self.drawnShape = np.zeros_like(self.canvasSurface)
-                    self.lastGesture = 0
                     self.Savehistory()
         
         self.laserPointerSurface = np.clip(self.laserPointerSurface * 0.9, 0, None).astype(np.uint8)

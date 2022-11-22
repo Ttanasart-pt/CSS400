@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 import math
 from shapely.geometry import LineString, Point
+import util.cvpainter as cvpainter
 
 
 def deep_index(lst, w, width_ratio, height_ratio):
@@ -14,8 +15,10 @@ def detectLines(frame):
     width_ratio = int(CANVAS_WIDTH / RESIZE_WIDTH)
     height_ratio = int(CANVAS_HEIGHT / RESIZE_HEIGHT)
 
+    kernel = np.ones((5,5), np.uint8)
+    opening = cv.morphologyEx(frame, cv.MORPH_OPEN, kernel)
     result = np.zeros_like(frame)
-    resize = cv.resize(frame, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_CUBIC)
+    resize = cv.resize(opening, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_NEAREST)
     dst = cv.cvtColor(resize, cv.COLOR_BGR2GRAY)
 
     lineList = deep_index(dst.tolist(), 255, width_ratio, height_ratio)
@@ -43,14 +46,13 @@ def detectShape(frame):
     resize = cv.resize(frame, (RESIZE_HEIGHT, RESIZE_WIDTH) , interpolation=cv.INTER_CUBIC)
     
     dst = cv.cvtColor(resize, cv.COLOR_BGR2GRAY)
-    linesP = cv.HoughLinesP(dst, 1, np.pi/180, 20, None, 15, 5)
+    linesP = cv.HoughLinesP(dst, 1, np.pi/180, 20, None, 20, 20)
 
     blur = cv.GaussianBlur(dst, (5, 5), 0)
     circles = cv.HoughCircles(blur, cv.HOUGH_GRADIENT, 1, 20, param1=15, param2=15, minRadius=0, maxRadius=0)
 
     #Probability Hough Lines
     if linesP is not None:
-        print(f"{len(linesP)} linesP detected")
         
         #Create an array contains LineString objects for each line
         linesArr = []
@@ -62,9 +64,9 @@ def detectShape(frame):
             x2 = l[2]*width_ratio
             y2 = l[3]*height_ratio
 
-            if abs(l[0]-l[2]) < 20 and abs(l[1]-l[3]) > 20:
+            if abs(l[0]-l[2]) < 10 and abs(l[1]-l[3]) > 10:
                 x2 = x1
-            if abs(l[1]-l[3]) < 20 and abs(l[0]-l[2]) > 20:
+            if abs(l[1]-l[3]) < 10 and abs(l[0]-l[2]) > 10:
                 y2 = y1
 
             pt1 = (x1, y1)
@@ -77,17 +79,12 @@ def detectShape(frame):
             l1 = linesArr[i]
             j = i+1
             while j < len(linesArr):
-                print(l1.coords[0], l1.coords[1])
-                print(linesArr[j].coords[0], linesArr[j].coords[1])
-                print(l1.centroid.distance(linesArr[j].centroid))
                 if l1.centroid.distance(linesArr[j].centroid) < 25:
                     linesArr.pop(j)
                     i=0
                     j=i+1
-                    print("Remove similar line")
                 j += 1
             i += 1
-        print(f"{len(linesArr)} linesP remained")
 
         #Create a list contains all points
         points = []
@@ -123,27 +120,25 @@ def detectShape(frame):
                 newLineString = LineString([linesArr[lineStringIndex].coords[0], closestPoint])
             linesArr[lineStringIndex] = newLineString
 
-
-        if len(linesArr) == 3:
-            print("Triangle")
-        elif len(linesArr) == 4:
-            print("Rectangle")
-        elif len(linesArr) == 5:
-            print("Pentagon")
-        elif len(linesArr) == 6:
-            print("Hexagon")
-        elif len(linesArr) > 6 and len(linesArr) < 12:
-            print("Polygon")
-
         for i in range(0, len(linesArr)):   
-            cv.line(result, (int(linesArr[i].coords[0][0]), int(linesArr[i].coords[0][1])), (int(linesArr[i].coords[1][0]), int(linesArr[i].coords[1][1])), (255,0,0), 3, cv.LINE_AA)
+            cv.line(result, (int(linesArr[i].coords[0][0]), int(linesArr[i].coords[0][1])), (int(linesArr[i].coords[1][0]),
+            int(linesArr[i].coords[1][1])), (255,0,0), 3, cv.LINE_AA)
 
     if circles is not None and linesP is None:
         circles = np.uint16(np.around(circles))
-        print("Circle")
 
         for i in circles[0,:]:
             cv.circle(result, (i[0]*width_ratio, i[1]*height_ratio), i[2]*width_ratio, (0, 255, 0), 2)
             cv.circle(result, (i[0]*width_ratio, i[1]*height_ratio), 2, (0, 0, 255), 3)
 
     return result
+
+def drawLines(drawnPoints, surface):
+    op = None
+    for p in drawnPoints:
+        if op is None:
+            op = p
+            continue
+        cvpainter.draw_line(surface, op, p, 5, (0, 255, 255))
+        op = p
+    return surface
